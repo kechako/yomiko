@@ -1,0 +1,10 @@
+services:
+  yomiko:
+    image: kechako/yomiko:latest
+    environment:
+      YOMIKO_TOKEN: ${YOMIKO_TOKEN}
+    volumes:
+      - type: bind
+        source: "${CREDENTIALS_FILE}"
+        target: /etc/yomiko/credentials.json
+        read_only: true

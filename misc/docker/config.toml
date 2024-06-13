@@ -1,0 +1,3 @@
+token = "${YOMIKO_TOKEN}"
+credentials_json = "${YOMIKO_CREDENTIALS_JSON}"
+credentials_file = "${YOMIKO_CREDENTIALS_FILE}"
