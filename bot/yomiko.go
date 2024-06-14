@@ -11,7 +11,7 @@ import (
 )
 
 const frameSizeMs = 20
-const frameSize = ttsSampleRate * frameSizeMs / 1000
+const frameSize = SampleRate * frameSizeMs / 1000
 
 type yomikoSession struct {
 	s              *discordgo.Session
@@ -24,7 +24,7 @@ type yomikoSession struct {
 }
 
 func newYomikoSession(s *discordgo.Session, ttsClient *tts.Client, guildID, textChannelID, voiceChannelID string) (*yomikoSession, error) {
-	enc, err := opus.NewEncoder(ttsSampleRate, 1, opus.AppVoIP)
+	enc, err := opus.NewEncoder(SampleRate, 1, opus.AppVoIP)
 	if err != nil {
 		return nil, fmt.Errorf("bot.newYomikoSession: %w", err)
 	}

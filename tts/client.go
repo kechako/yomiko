@@ -12,6 +12,15 @@ import (
 const (
 	DefaultLanguageCode = "ja-JP"
 	DefaultSampleRate   = 48000
+
+	DefaultVoiceName    = ""
+	DefaultSpeakingRate = 1.0
+	DefaultPitch        = 0.0
+
+	MaxSpeakingRate = 4.0
+	MinSpeakingRate = 0.25
+	MaxPitch        = 20.0
+	MinPitch        = -20.0
 )
 
 type Client struct {

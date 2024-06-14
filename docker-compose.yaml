@@ -8,3 +8,7 @@ services:
         source: "${CREDENTIALS_FILE}"
         target: /etc/yomiko/credentials.json
         read_only: true
+      - type: bind
+        source: "${DATABASE_PATH}"
+        target: /usr/var/lib/yomiko/yomiko.db
+        read_only: false

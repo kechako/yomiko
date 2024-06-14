@@ -14,6 +14,7 @@ type Config struct {
 	Token           string `toml:"token"`
 	CredentialsJSON string `toml:"credentials_json"`
 	CredentialsFile string `toml:"credentials_file"`
+	DatabasePath    string `toml:"database_path"`
 }
 
 func ReadConfigFile(name string) (*Config, error) {

@@ -32,10 +32,10 @@ func (bot *Bot) getApplicationCommands(ctx context.Context) ([]*discordgo.Applic
 	}
 
 	var (
-		minSpeed = float64(0.25)
-		maxSpeed = float64(4.0)
-		minPitch = float64(-20.0)
-		maxPitch = float64(20.0)
+		minSpeed = float64(tts.MinSpeakingRate)
+		maxSpeed = float64(tts.MaxSpeakingRate)
+		minPitch = float64(tts.MinPitch)
+		maxPitch = float64(tts.MaxPitch)
 	)
 
 	return []*discordgo.ApplicationCommand{
@@ -106,6 +106,11 @@ func (bot *Bot) getApplicationCommands(ctx context.Context) ([]*discordgo.Applic
 							Required:    true,
 						},
 					},
+				},
+				{
+					Name:        "reset",
+					Description: "読子さんの声の設定を初期値に設定します。",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 			},
 		},

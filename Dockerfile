@@ -26,6 +26,7 @@ RUN go mod download
 COPY ./audio ./audio
 COPY ./bot ./bot
 COPY ./cmd ./cmd
+COPY ./ent ./ent
 COPY ./tts ./tts
 COPY ./misc ./misc
 RUN go install ./cmd/yomiko
@@ -41,9 +42,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopusfile0 \
 && rm -rf /var/lib/apt/lists/*
 
+RUN mkdir -p /etc/yomiko /usr/var/lib/yomiko
+
 ENV YOMIKO_TOKEN ""
 ENV YOMIKO_CREDENTIALS_JSON ""
 ENV YOMIKO_CREDENTIALS_FILE "/etc/yomiko/credentials.json"
+ENV YOMIKO_DATABASE_PATH "/usr/var/lib/yomiko/yomiko.db"
 
 COPY --from=builder /go/bin/yomiko /usr/bin/yomiko
 COPY ./misc/docker/config.toml /etc/yomiko/config.toml

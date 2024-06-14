@@ -1,3 +1,4 @@
 token = "${YOMIKO_TOKEN}"
 credentials_json = "${YOMIKO_CREDENTIALS_JSON}"
 credentials_file = "${YOMIKO_CREDENTIALS_FILE}"
+database_path = "${YOMIKO_DATABASE_PATH}"

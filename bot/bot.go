@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/kechako/yomiko/ent"
+	"github.com/kechako/yomiko/ent/voicesetting"
 	"github.com/kechako/yomiko/tts"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -18,7 +22,7 @@ var (
 	errYomikoHasNotJoined  = errors.New("yomiko has not joined any channels")
 )
 
-const ttsSampleRate = 48000
+const SampleRate = 48000
 
 const (
 	colorSuccess = 0x26cb3f
@@ -27,33 +31,17 @@ const (
 	colorError   = 0xff5959
 )
 
-type voiceSetting struct {
-	Name         string
-	SpeakingRate float64
-	Pitch        float64
-}
-
-func defaultVoiceSetting() *voiceSetting {
-	return &voiceSetting{
-		Name:         "",
-		SpeakingRate: 1.0,
-		Pitch:        0.0,
-	}
-}
-
 type Bot struct {
 	cfg      *Config
 	s        *discordgo.Session
 	tts      *tts.Client
+	ent      *ent.Client
 	logger   *slog.Logger
 	commands []*discordgo.ApplicationCommand
 
 	mu       sync.RWMutex
 	sessions map[string]*yomikoSession
 	targets  map[string]string
-
-	forVoiceSetting sync.RWMutex
-	voiceSettings   map[string]*voiceSetting
 
 	exit func()
 }
@@ -65,7 +53,7 @@ func New(ctx context.Context, cfg *Config) (*Bot, error) {
 	}
 
 	ttsOpts := []tts.ClientOption{
-		tts.WithSampleRate(ttsSampleRate),
+		tts.WithSampleRate(SampleRate),
 	}
 	if credJSON, err := cfg.getCredentialsJSON(); err != nil {
 		return nil, fmt.Errorf("bot.New: %w", err)
@@ -78,14 +66,23 @@ func New(ctx context.Context, cfg *Config) (*Bot, error) {
 		return nil, fmt.Errorf("bot.New: %w", err)
 	}
 
+	e, err := ent.Open("sqlite3", makeDataSourceName(cfg))
+	if err != nil {
+		return nil, fmt.Errorf("bot.New: %w", err)
+	}
+
+	if err := e.Schema.Create(ctx); err != nil {
+		return nil, fmt.Errorf("bot.New: %w", err)
+	}
+
 	bot := &Bot{
-		cfg:           cfg,
-		s:             s,
-		tts:           c,
-		logger:        slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
-		sessions:      make(map[string]*yomikoSession),
-		targets:       make(map[string]string),
-		voiceSettings: make(map[string]*voiceSetting),
+		cfg:      cfg,
+		s:        s,
+		tts:      c,
+		ent:      e,
+		logger:   slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
+		sessions: make(map[string]*yomikoSession),
+		targets:  make(map[string]string),
 	}
 
 	if err := bot.init(); err != nil {
@@ -116,6 +113,20 @@ func (bot *Bot) init() error {
 	return nil
 }
 
+func makeDataSourceName(cfg *Config) string {
+	opts := url.Values{}
+	opts.Set("mode", "rwc")
+	opts.Set("_fk", "1")
+
+	n := &url.URL{
+		Scheme:   "file",
+		Path:     cfg.DatabasePath,
+		RawQuery: opts.Encode(),
+	}
+
+	return n.String()
+}
+
 func (bot *Bot) Close() error {
 	var errs []error
 
@@ -127,6 +138,9 @@ func (bot *Bot) Close() error {
 		errs = append(errs, err)
 	}
 	if err := bot.tts.Close(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := bot.ent.Close(); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -190,21 +204,28 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 		return
 	}
 
+	ctx := context.Background()
+
+	vs, err := bot.getUserVoiceSetting(ctx, event.Author.ID)
+	if err != nil {
+		bot.logger.Error("failed to get user voice setting", slog.Any("error", err))
+		return
+	}
+
 	var opts []tts.SynthesizeSpeechOption
-	settings, ok := bot.voiceSettings[event.Author.ID]
-	if ok {
-		if settings.Name != "" {
-			opts = append(opts, tts.WithVoiceName(settings.Name))
+	if vs != nil {
+		if vs.VoiceName != nil {
+			opts = append(opts, tts.WithVoiceName(*vs.VoiceName))
 		}
-		if settings.SpeakingRate != 1.0 {
-			opts = append(opts, tts.WithSpeakingRate(settings.SpeakingRate))
+		if vs.SpeakingRate != nil {
+			opts = append(opts, tts.WithSpeakingRate(*vs.SpeakingRate))
 		}
-		if settings.Pitch != 0.0 {
-			opts = append(opts, tts.WithPitch(settings.Pitch))
+		if vs.Pitch != nil {
+			opts = append(opts, tts.WithPitch(*vs.Pitch))
 		}
 	}
 
-	err := ys.Read(context.Background(), contentWithMentionsReplaced(event.Message), opts...)
+	err = ys.Read(context.Background(), contentWithMentionsReplaced(event.Message), opts...)
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
@@ -231,6 +252,8 @@ func (bot *Bot) handleGuildCreate(s *discordgo.Session, event *discordgo.GuildCr
 }
 
 func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.InteractionCreate) {
+	ctx := context.Background()
+
 	guildID := event.GuildID
 	channelID := event.ChannelID
 
@@ -292,14 +315,11 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 			voiceName := subCmd.Options[0].Value.(string)
 
 			userID := event.Member.User.ID
-			bot.forVoiceSetting.Lock()
-			setting, ok := bot.voiceSettings[userID]
-			if !ok {
-				setting = defaultVoiceSetting()
-				bot.voiceSettings[userID] = setting
+			vs, err := bot.updateUserVoiceName(ctx, userID, voiceName)
+			if err != nil {
+				res = createErrorResponse("エラーが発生しました！", "")
+				break
 			}
-			setting.Name = voiceName
-			bot.forVoiceSetting.Unlock()
 
 			res = &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -307,7 +327,7 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 					Embeds: []*discordgo.MessageEmbed{
 						{
 							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの声を「%s」に設定しました。", voiceName),
+							Description: fmt.Sprintf("読子さんの声を「%s」に設定しました。", *vs.VoiceName),
 							Color:       colorSuccess,
 						},
 					},
@@ -317,14 +337,11 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 			speakingRate := subCmd.Options[0].Value.(float64)
 
 			userID := event.Member.User.ID
-			bot.forVoiceSetting.Lock()
-			setting, ok := bot.voiceSettings[userID]
-			if !ok {
-				setting = defaultVoiceSetting()
-				bot.voiceSettings[userID] = setting
+			vs, err := bot.updateUserSpeakingRate(ctx, userID, speakingRate)
+			if err != nil {
+				res = createErrorResponse("エラーが発生しました！", "")
+				break
 			}
-			setting.SpeakingRate = speakingRate
-			bot.forVoiceSetting.Unlock()
 
 			res = &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -332,7 +349,7 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 					Embeds: []*discordgo.MessageEmbed{
 						{
 							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの読み上げ速度を「%.01f」に設定しました。", speakingRate),
+							Description: fmt.Sprintf("読子さんの読み上げ速度を「%.01f」に設定しました。", *vs.SpeakingRate),
 							Color:       colorSuccess,
 						},
 					},
@@ -342,14 +359,11 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 			pitch := subCmd.Options[0].Value.(float64)
 
 			userID := event.Member.User.ID
-			bot.forVoiceSetting.Lock()
-			setting, ok := bot.voiceSettings[userID]
-			if !ok {
-				setting = defaultVoiceSetting()
-				bot.voiceSettings[userID] = setting
+			vs, err := bot.updateUserVoicePitch(ctx, userID, pitch)
+			if err != nil {
+				res = createErrorResponse("エラーが発生しました！", "")
+				break
 			}
-			setting.Pitch = pitch
-			bot.forVoiceSetting.Unlock()
 
 			res = &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -357,7 +371,27 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 					Embeds: []*discordgo.MessageEmbed{
 						{
 							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの声の音程を「%.01f」に設定しました。", pitch),
+							Description: fmt.Sprintf("読子さんの声の音程を「%.01f」に設定しました。", *vs.Pitch),
+							Color:       colorSuccess,
+						},
+					},
+				},
+			}
+		case "reset":
+			userID := event.Member.User.ID
+			_, err := bot.resetUserVoiceSetting(ctx, userID)
+			if err != nil {
+				res = createErrorResponse("エラーが発生しました！", "")
+				break
+			}
+
+			res = &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Embeds: []*discordgo.MessageEmbed{
+						{
+							Title:       "ボイス設定",
+							Description: "読子さんの声の設定を初期値に設定しました。",
 							Color:       colorSuccess,
 						},
 					},
@@ -457,6 +491,90 @@ func (bot *Bot) yomikoLeave(guildID string) (string, error) {
 	return ys.VoiceChannelID(), nil
 }
 
-func makeTextChannelKey(guildID, channelID string) string {
-	return strings.Join([]string{guildID, channelID}, ":")
+func (bot *Bot) updateUserVoiceName(ctx context.Context, userID, voiceName string) (*ent.VoiceSetting, error) {
+	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
+		m.SetVoiceName(voiceName)
+	})
+}
+
+func (bot *Bot) updateUserSpeakingRate(ctx context.Context, userID string, speakingRate float64) (*ent.VoiceSetting, error) {
+	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
+		m.SetSpeakingRate(speakingRate)
+	})
+}
+
+func (bot *Bot) updateUserVoicePitch(ctx context.Context, userID string, pitch float64) (*ent.VoiceSetting, error) {
+	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
+		m.SetPitch(pitch)
+	})
+}
+
+func (bot *Bot) resetUserVoiceSetting(ctx context.Context, userID string) (*ent.VoiceSetting, error) {
+	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
+		m.ClearVoiceName()
+		m.ClearSpeakingRate()
+		m.ClearPitch()
+	})
+}
+
+func (bot *Bot) updateUserVoiceSetting(ctx context.Context, userID string, f func(m *ent.VoiceSettingMutation)) (*ent.VoiceSetting, error) {
+	tx, err := bot.ent.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err)
+	}
+	vs, err := tx.VoiceSetting.Query().
+		Where(voicesetting.UserID(userID)).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
+	}
+
+	if vs == nil {
+		// create
+		create := tx.VoiceSetting.Create().
+			SetUserID(userID)
+
+		f(create.Mutation())
+
+		vs, err = create.Save(ctx)
+		if err != nil {
+			return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
+		}
+	} else {
+		// update
+		update := tx.VoiceSetting.UpdateOne(vs)
+		f(update.Mutation())
+
+		vs, err = update.Save(ctx)
+		if err != nil {
+			return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return vs, nil
+}
+
+func (bot *Bot) getUserVoiceSetting(ctx context.Context, userID string) (*ent.VoiceSetting, error) {
+	vs, err := bot.ent.VoiceSetting.Query().
+		Where(voicesetting.UserID(userID)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("bot.Bot.getUserVoiceSetting: %w", err)
+	}
+
+	return vs, nil
+}
+
+func rollback(tx *ent.Tx, err error) error {
+	if rerr := tx.Rollback(); rerr != nil {
+		err = errors.Join(err, rerr)
+	}
+	return err
 }
