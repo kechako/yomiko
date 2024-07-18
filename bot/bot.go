@@ -225,7 +225,13 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 		}
 	}
 
-	err = ys.Read(context.Background(), contentWithMentionsReplaced(event.Message), opts...)
+	err = ys.Read(
+		context.Background(),
+		fmt.Sprintf(
+			"%s: %s",
+			event.Author.GlobalName,
+			contentWithMentionsReplaced(event.Message),
+		), opts...)
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
