@@ -170,7 +170,7 @@ func (bot *Bot) Start(ctx context.Context) error {
 
 func (bot *Bot) handleReady(s *discordgo.Session, event *discordgo.Ready) {
 	bot.logger.Info("ready")
-	s.UpdateGameStatus(0, "yomiko")
+	bot.updateGameStatus()
 
 	commands, err := bot.getApplicationCommands(context.Background())
 	if err != nil {
@@ -186,6 +186,15 @@ func (bot *Bot) handleReady(s *discordgo.Session, event *discordgo.Ready) {
 		}
 		bot.commands = append(bot.commands, cmd)
 	}
+}
+
+func (bot *Bot) updateGameStatus() {
+	bot.mu.RLock()
+	defer bot.mu.RUnlock()
+
+	name := fmt.Sprintf("%d 個のサーバーで読み上げ", len(bot.sessions))
+
+	bot.s.UpdateGameStatus(0, name)
 }
 
 func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.MessageCreate) {
@@ -478,6 +487,8 @@ func (bot *Bot) cleanupApplicationCommands() {
 }
 
 func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomikoSession, error) {
+	defer bot.updateGameStatus()
+
 	bot.mu.Lock()
 	defer bot.mu.Unlock()
 
@@ -496,6 +507,8 @@ func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomi
 }
 
 func (bot *Bot) yomikoLeave(guildID string) (string, error) {
+	defer bot.updateGameStatus()
+
 	bot.mu.Lock()
 	defer bot.mu.Unlock()
 
