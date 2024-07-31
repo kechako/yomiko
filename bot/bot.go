@@ -134,6 +134,9 @@ func (bot *Bot) Close() error {
 		bot.exit()
 	}
 
+	if err := bot.closeAllSessions(); err != nil {
+		errs = append(errs, err)
+	}
 	if err := bot.s.Close(); err != nil {
 		errs = append(errs, err)
 	}
@@ -509,6 +512,25 @@ func (bot *Bot) yomikoLeave(guildID string) (string, error) {
 	delete(bot.sessions, guildID)
 
 	return ys.VoiceChannelID(), nil
+}
+
+func (bot *Bot) closeAllSessions() error {
+	bot.mu.Lock()
+	defer bot.mu.Unlock()
+
+	var errs []error
+
+	for guildID, ys := range bot.sessions {
+		err := ys.Close()
+		if err != nil {
+			errs = append(errs, fmt.Errorf("bot.Bot.closeAllSessions: %w", err))
+			continue
+		}
+
+		delete(bot.sessions, guildID)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (bot *Bot) updateUserVoiceName(ctx context.Context, userID, voiceName string) (*ent.VoiceSetting, error) {
