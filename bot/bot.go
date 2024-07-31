@@ -229,12 +229,26 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 		context.Background(),
 		fmt.Sprintf(
 			"%s: %s",
-			event.Author.GlobalName,
+			messageAuthorName(event.Message),
 			contentWithMentionsReplaced(event.Message),
 		), opts...)
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
+}
+
+func messageAuthorName(msg *discordgo.Message) (name string) {
+	if msg.Member != nil {
+		name = msg.Member.Nick
+	}
+	if name == "" {
+		name = msg.Author.GlobalName
+	}
+	if name == "" {
+		name = msg.Author.Username
+	}
+
+	return name
 }
 
 func contentWithMentionsReplaced(m *discordgo.Message) (content string) {
