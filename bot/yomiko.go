@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kechako/yomiko/audio/pcm"
@@ -14,10 +15,13 @@ const frameSizeMs = 20
 const frameSize = SampleRate * frameSizeMs / 1000
 
 type yomikoSession struct {
-	s              *discordgo.Session
-	conn           *discordgo.VoiceConnection
-	tts            *tts.Client
-	enc            *opus.Encoder
+	s    *discordgo.Session
+	conn *discordgo.VoiceConnection
+	mu   sync.Mutex
+
+	tts *tts.Client
+	enc *opus.Encoder
+
 	guildID        string
 	textChannelID  string
 	voiceChannelID string
@@ -46,7 +50,19 @@ func newYomikoSession(s *discordgo.Session, ttsClient *tts.Client, guildID, text
 }
 
 func (s *yomikoSession) Close() error {
-	return s.conn.Disconnect()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.conn == nil {
+		return nil
+	}
+
+	err := s.conn.Disconnect()
+	if err != nil {
+		return err
+	}
+	s.conn = nil
+
+	return nil
 }
 
 func (s *yomikoSession) GuildID() string {
@@ -65,6 +81,12 @@ func (s *yomikoSession) Read(ctx context.Context, text string, opts ...tts.Synth
 	p, err := s.tts.SynthesizeSpeech(ctx, text, opts...)
 	if err != nil {
 		return fmt.Errorf("bot.yomikoSession.Read: %w", err)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.conn == nil {
+		return nil
 	}
 
 	s.conn.Speaking(true)
