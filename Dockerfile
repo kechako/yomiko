@@ -1,6 +1,6 @@
 ################################
 # Build
-FROM golang:1.22-bookworm AS builder
+FROM golang:1.23-bookworm AS builder
 
 ENV DEBIAN_FRONTEND noninteractive
 
