@@ -71,7 +71,7 @@ func (c *Client) ListVoices(ctx context.Context) ([]*Voice, error) {
 	return res.GetVoices(), nil
 }
 
-func (c *Client) SynthesizeSpeech(ctx context.Context, text string, opts ...SynthesizeSpeechOption) ([]byte, error) {
+func (c *Client) SynthesizeSpeech(ctx context.Context, ssml string, opts ...SynthesizeSpeechOption) ([]byte, error) {
 	o := synthesizeSpeechOptions{
 		speakingRate: 1.0,
 		pitch:        0.0,
@@ -82,8 +82,8 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, text string, opts ...Synt
 
 	res, err := c.client.SynthesizeSpeech(ctx, &texttospeechpb.SynthesizeSpeechRequest{
 		Input: &texttospeechpb.SynthesisInput{
-			InputSource: &texttospeechpb.SynthesisInput_Text{
-				Text: text,
+			InputSource: &texttospeechpb.SynthesisInput_Ssml{
+				Ssml: ssml,
 			},
 		},
 		Voice: &texttospeechpb.VoiceSelectionParams{

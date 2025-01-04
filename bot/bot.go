@@ -1,12 +1,14 @@
 package bot
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -239,14 +241,70 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 
 	err = ys.Read(
 		context.Background(),
-		fmt.Sprintf(
-			"%s: %s",
-			messageAuthorName(event.Message),
-			contentWithMentionsReplaced(event.Message),
-		), opts...)
+		makeSSML(event.Message),
+		opts...)
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
+}
+
+var ssmlEscaper = strings.NewReplacer(
+	`"`, "&quot;",
+	`&`, "&amp;",
+	`'`, "&apos;",
+	`<`, "&lt;",
+	`>`, "&gt;",
+)
+
+var urlRegexp = regexp.MustCompile(`https?://[^\s]{2,}`)
+
+func makeSSML(msg *discordgo.Message) string {
+	var ssml strings.Builder
+	ssml.WriteString("<speak>")
+
+	author := messageAuthorName(msg)
+	ssml.WriteString("<p><s>")
+	ssmlEscaper.WriteString(&ssml, author)
+	ssml.WriteString("</s></p>")
+
+	mr := newMentionReplacer(msg)
+
+	s := bufio.NewScanner(strings.NewReader(msg.Content))
+
+	ssml.WriteString("<p>")
+	for s.Scan() {
+		ssml.WriteString("<s>")
+
+		text := mr.Replace(s.Text())
+		start := 0
+		indexes := urlRegexp.FindAllStringIndex(text, -1)
+		for _, index := range indexes {
+			if start < index[0] {
+				ssmlEscaper.WriteString(&ssml, text[start:index[0]])
+			}
+
+			s := text[index[0]:index[1]]
+			if strings.HasPrefix(s, "https://") {
+				s = "<say-as interpret-as=\"characters\">https://</say-as>以下略"
+			} else if strings.HasPrefix(s, "http://") {
+				s = "<say-as interpret-as=\"characters\">http://</say-as>以下略"
+			} else {
+				s = "<say-as interpret-as=\"characters\">URL</say-as>"
+			}
+			ssml.WriteString(s)
+
+			start = index[1]
+		}
+		if start < len(text) {
+			ssmlEscaper.WriteString(&ssml, text[start:])
+		}
+		ssml.WriteString("</s>")
+	}
+	ssml.WriteString("</p>")
+
+	ssml.WriteString("</speak>")
+
+	return ssml.String()
 }
 
 func messageAuthorName(msg *discordgo.Message) (name string) {
@@ -263,20 +321,19 @@ func messageAuthorName(msg *discordgo.Message) (name string) {
 	return name
 }
 
-func contentWithMentionsReplaced(m *discordgo.Message) (content string) {
-	content = m.Content
+func newMentionReplacer(m *discordgo.Message) *strings.Replacer {
+	var oldnew []string
 
 	for _, user := range m.Mentions {
 		username := user.GlobalName
 		if username == "" {
 			username = user.Username
 		}
-		content = strings.NewReplacer(
-			"<@"+user.ID+">", username,
-			"<@!"+user.ID+">", username,
-		).Replace(content)
+		oldnew = append(oldnew, "<@"+user.ID+">", username)
+		oldnew = append(oldnew, "<@!"+user.ID+">", username)
 	}
-	return
+
+	return strings.NewReplacer(oldnew...)
 }
 
 func (bot *Bot) handleGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {

@@ -77,8 +77,8 @@ func (s *yomikoSession) VoiceChannelID() string {
 	return s.voiceChannelID
 }
 
-func (s *yomikoSession) Read(ctx context.Context, text string, opts ...tts.SynthesizeSpeechOption) error {
-	p, err := s.tts.SynthesizeSpeech(ctx, text, opts...)
+func (s *yomikoSession) Read(ctx context.Context, ssml string, opts ...tts.SynthesizeSpeechOption) error {
+	p, err := s.tts.SynthesizeSpeech(ctx, ssml, opts...)
 	if err != nil {
 		return fmt.Errorf("bot.yomikoSession.Read: %w", err)
 	}
