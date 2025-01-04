@@ -30,6 +30,7 @@ COPY ./audio ./audio
 COPY ./bot ./bot
 COPY ./cmd ./cmd
 COPY ./ent ./ent
+COPY ./ssml ./ssml
 COPY ./tts ./tts
 COPY ./misc ./misc
 RUN go install ./cmd/yomiko

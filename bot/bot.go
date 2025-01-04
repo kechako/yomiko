@@ -15,6 +15,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/kechako/yomiko/ent"
 	"github.com/kechako/yomiko/ent/voicesetting"
+	"github.com/kechako/yomiko/ssml"
 	"github.com/kechako/yomiko/tts"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -40,6 +41,8 @@ type Bot struct {
 	ent      *ent.Client
 	logger   *slog.Logger
 	commands []*discordgo.ApplicationCommand
+
+	reps *strings.Replacer
 
 	mu       sync.RWMutex
 	sessions map[string]*yomikoSession
@@ -83,6 +86,7 @@ func New(ctx context.Context, cfg *Config) (*Bot, error) {
 		tts:      c,
 		ent:      e,
 		logger:   slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
+		reps:     makeReplacer(cfg),
 		sessions: make(map[string]*yomikoSession),
 		targets:  make(map[string]string),
 	}
@@ -241,70 +245,61 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 
 	err = ys.Read(
 		context.Background(),
-		makeSSML(event.Message),
+		bot.makeSSML(event.Message),
 		opts...)
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
 }
 
-var ssmlEscaper = strings.NewReplacer(
-	`"`, "&quot;",
-	`&`, "&amp;",
-	`'`, "&apos;",
-	`<`, "&lt;",
-	`>`, "&gt;",
-)
-
 var urlRegexp = regexp.MustCompile(`https?://[^\s]{2,}`)
 
-func makeSSML(msg *discordgo.Message) string {
-	var ssml strings.Builder
-	ssml.WriteString("<speak>")
-
+func (bot *Bot) makeSSML(msg *discordgo.Message) string {
+	b := ssml.New()
 	author := messageAuthorName(msg)
-	ssml.WriteString("<p><s>")
-	ssmlEscaper.WriteString(&ssml, author)
-	ssml.WriteString("</s></p>")
+	b.Paragraph(func(b *ssml.Builder) {
+		b.Sentence(func(b *ssml.Builder) {
+			b.Text(bot.reps.Replace(author))
+		})
+	})
 
 	mr := newMentionReplacer(msg)
 
 	s := bufio.NewScanner(strings.NewReader(msg.Content))
 
-	ssml.WriteString("<p>")
-	for s.Scan() {
-		ssml.WriteString("<s>")
+	b.Paragraph(func(b *ssml.Builder) {
+		for s.Scan() {
+			b.Sentence(func(b *ssml.Builder) {
 
-		text := mr.Replace(s.Text())
-		start := 0
-		indexes := urlRegexp.FindAllStringIndex(text, -1)
-		for _, index := range indexes {
-			if start < index[0] {
-				ssmlEscaper.WriteString(&ssml, text[start:index[0]])
-			}
+				text := mr.Replace(s.Text())
+				start := 0
+				indexes := urlRegexp.FindAllStringIndex(text, -1)
+				for _, index := range indexes {
+					if start < index[0] {
+						b.Text(bot.reps.Replace(text[start:index[0]]))
+					}
 
-			s := text[index[0]:index[1]]
-			if strings.HasPrefix(s, "https://") {
-				s = "<say-as interpret-as=\"characters\">https://</say-as>以下略"
-			} else if strings.HasPrefix(s, "http://") {
-				s = "<say-as interpret-as=\"characters\">http://</say-as>以下略"
-			} else {
-				s = "<say-as interpret-as=\"characters\">URL</say-as>"
-			}
-			ssml.WriteString(s)
+					s := text[index[0]:index[1]]
+					if strings.HasPrefix(s, "https://") {
+						b.SayAs("characters", "https://")
+						b.Text("以下略")
+					} else if strings.HasPrefix(s, "http://") {
+						b.SayAs("characters", "http://")
+						b.Text("以下略")
+					} else {
+						b.SayAs("characters", "URL")
+					}
 
-			start = index[1]
+					start = index[1]
+				}
+				if start < len(text) {
+					b.Text(bot.reps.Replace(text[start:]))
+				}
+			})
 		}
-		if start < len(text) {
-			ssmlEscaper.WriteString(&ssml, text[start:])
-		}
-		ssml.WriteString("</s>")
-	}
-	ssml.WriteString("</p>")
+	})
 
-	ssml.WriteString("</speak>")
-
-	return ssml.String()
+	return b.String()
 }
 
 func messageAuthorName(msg *discordgo.Message) (name string) {
@@ -689,4 +684,14 @@ func rollback(tx *ent.Tx, err error) error {
 		err = errors.Join(err, rerr)
 	}
 	return err
+}
+
+func makeReplacer(cfg *Config) *strings.Replacer {
+	var oldnew []string
+
+	for _, rep := range cfg.Replacements {
+		oldnew = append(oldnew, rep.From, rep.To)
+	}
+
+	return strings.NewReplacer(oldnew...)
 }
