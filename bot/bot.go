@@ -11,9 +11,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"unicode/utf8"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/kechako/yomiko/bot/internal/replacer"
 	"github.com/kechako/yomiko/ent"
 	"github.com/kechako/yomiko/ent/voicesetting"
 	"github.com/kechako/yomiko/ssml"
@@ -43,7 +43,7 @@ type Bot struct {
 	logger   *slog.Logger
 	commands []*discordgo.ApplicationCommand
 
-	reps *strings.Replacer
+	replacer *replacer.Replacer
 
 	mu       sync.RWMutex
 	sessions map[string]*yomikoSession
@@ -87,7 +87,7 @@ func New(ctx context.Context, cfg *Config) (*Bot, error) {
 		tts:      c,
 		ent:      e,
 		logger:   slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
-		reps:     makeReplacer(cfg),
+		replacer: makeReplacer(cfg),
 		sessions: make(map[string]*yomikoSession),
 		targets:  make(map[string]string),
 	}
@@ -256,55 +256,34 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 var urlRegexp = regexp.MustCompile(`https?://[^\s]{2,}`)
 
 func (bot *Bot) makeSSML(msg *discordgo.Message) string {
-	b := ssml.New()
+	root := ssml.New()
 	author := messageAuthorName(msg)
-	b.Paragraph(func(b *ssml.Builder) {
-		b.Sentence(func(b *ssml.Builder) {
-			b.Text(bot.reps.Replace(author))
-		})
+
+	// add author
+	authorSentence := &ssml.Sentence{}
+	bot.replacer.Replace(authorSentence, author)
+	root.AddNode(&ssml.Paragraph{
+		Nodes: []ssml.Node{
+			authorSentence,
+		},
 	})
 
 	mr := newMentionReplacer(msg)
 
 	s := bufio.NewScanner(strings.NewReader(msg.Content))
 
-	replace := func(s string) string {
-		return bot.reps.Replace(s)
+	p := &ssml.Paragraph{}
+	root.AddNode(p)
+
+	for s.Scan() {
+		sentence := &ssml.Sentence{}
+		p.AddNode(sentence)
+
+		text := mr.Replace(strings.TrimSpace(s.Text()))
+		bot.replacer.Replace(sentence, text)
 	}
 
-	b.Paragraph(func(b *ssml.Builder) {
-		for s.Scan() {
-			b.Sentence(func(b *ssml.Builder) {
-
-				text := mr.Replace(strings.TrimSpace(s.Text()))
-				start := 0
-				indexes := urlRegexp.FindAllStringIndex(text, -1)
-				for _, index := range indexes {
-					if start < index[0] {
-						replaceKusa(replace(text[start:index[0]]), b)
-					}
-
-					s := text[index[0]:index[1]]
-					if strings.HasPrefix(s, "https://") {
-						b.SayAs("characters", "https://")
-						b.Text("以下略")
-					} else if strings.HasPrefix(s, "http://") {
-						b.SayAs("characters", "http://")
-						b.Text("以下略")
-					} else {
-						b.SayAs("characters", "URL")
-					}
-
-					start = index[1]
-				}
-				if start < len(text) {
-					replaceKusa(replace(text[start:]), b)
-				}
-			})
-		}
-	})
-
-	return b.String()
+	return root.ToSSML()
 }
 
 func messageAuthorName(msg *discordgo.Message) (name string) {
@@ -334,59 +313,6 @@ func newMentionReplacer(m *discordgo.Message) *strings.Replacer {
 	}
 
 	return strings.NewReplacer(oldnew...)
-}
-
-var wwwRegexp = regexp.MustCompile(`([^wｗ]|^)([wｗ]+)([^wｗ]|$)`)
-
-func replaceKusa(s string, b *ssml.Builder) {
-	if len(s) == 0 {
-		return
-	}
-
-	offset := 0
-	for _, submatches := range wwwRegexp.FindAllStringSubmatchIndex(s, -1) {
-		preceding := []rune(s[submatches[2]:submatches[3]])
-		following := []rune(s[submatches[6]:submatches[7]])
-
-		st, ed := submatches[4], submatches[5]
-		kusa := s[st:ed]
-		if offset < st {
-			b.Text(s[offset:st])
-		}
-		offset = ed
-
-		if (len(preceding) == 0 || !isAlphabet(preceding[0])) &&
-			(len(following) == 0 || !isAlphabet(following[0])) {
-			b.Sub(kusa, makeKusa(kusa))
-		} else {
-			b.Text(kusa)
-		}
-	}
-	if offset < len(s) {
-		b.Text(s[offset:])
-	}
-}
-
-func isAlphabet(r rune) bool {
-	return (r >= 'a' && r <= 'z') ||
-		(r >= 'A' && r <= 'Z') ||
-		(r >= 'ａ' && r <= 'ｚ') ||
-		(r >= 'Ａ' && r <= 'Ｚ')
-}
-
-func makeKusa(kusa string) string {
-	switch utf8.RuneCountInString(kusa) {
-	case 0:
-		return ""
-	case 1:
-		return "くさ"
-	case 2:
-		return "わらわら"
-	case 3:
-		return "わらわらわら"
-	default:
-		return "だいそうげん"
-	}
 }
 
 func (bot *Bot) handleGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
@@ -744,12 +670,12 @@ func rollback(tx *ent.Tx, err error) error {
 	return err
 }
 
-func makeReplacer(cfg *Config) *strings.Replacer {
+func makeReplacer(cfg *Config) *replacer.Replacer {
 	var oldnew []string
 
 	for _, rep := range cfg.Replacements {
 		oldnew = append(oldnew, rep.From, rep.To)
 	}
 
-	return strings.NewReplacer(oldnew...)
+	return replacer.New(oldnew...)
 }

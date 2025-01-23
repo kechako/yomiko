@@ -1,12 +1,13 @@
 module github.com/kechako/yomiko
 
-go 1.22.3
+go 1.23.5
 
 require (
 	cloud.google.com/go/texttospeech v1.7.7
 	entgo.io/ent v0.13.1
 	github.com/BurntSushi/toml v1.4.0
 	github.com/bwmarrin/discordgo v0.28.1
+	github.com/google/go-cmp v0.6.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/urfave/cli/v2 v2.27.2
 	google.golang.org/api v0.183.0
@@ -29,7 +30,6 @@ require (
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
