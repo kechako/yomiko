@@ -30,6 +30,14 @@ func (b *Builder) SayAs(interpretAs string, text string) {
 	b.b.WriteString("</say-as>")
 }
 
+func (b *Builder) Sub(text, alias string) {
+	b.b.WriteString("<sub alias=\"")
+	ssmlEscaper.WriteString(&b.b, alias)
+	b.b.WriteString("\">")
+	ssmlEscaper.WriteString(&b.b, text)
+	b.b.WriteString("</sub>")
+}
+
 func (b *Builder) Paragraph(f func(b *Builder)) {
 	b.b.WriteString("<p>")
 	f(b)

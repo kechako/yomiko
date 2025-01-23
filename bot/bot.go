@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kechako/yomiko/ent"
@@ -267,16 +268,20 @@ func (bot *Bot) makeSSML(msg *discordgo.Message) string {
 
 	s := bufio.NewScanner(strings.NewReader(msg.Content))
 
+	replace := func(s string) string {
+		return bot.reps.Replace(s)
+	}
+
 	b.Paragraph(func(b *ssml.Builder) {
 		for s.Scan() {
 			b.Sentence(func(b *ssml.Builder) {
 
-				text := mr.Replace(s.Text())
+				text := mr.Replace(strings.TrimSpace(s.Text()))
 				start := 0
 				indexes := urlRegexp.FindAllStringIndex(text, -1)
 				for _, index := range indexes {
 					if start < index[0] {
-						b.Text(bot.reps.Replace(text[start:index[0]]))
+						replaceKusa(replace(text[start:index[0]]), b)
 					}
 
 					s := text[index[0]:index[1]]
@@ -293,7 +298,7 @@ func (bot *Bot) makeSSML(msg *discordgo.Message) string {
 					start = index[1]
 				}
 				if start < len(text) {
-					b.Text(bot.reps.Replace(text[start:]))
+					replaceKusa(replace(text[start:]), b)
 				}
 			})
 		}
@@ -329,6 +334,59 @@ func newMentionReplacer(m *discordgo.Message) *strings.Replacer {
 	}
 
 	return strings.NewReplacer(oldnew...)
+}
+
+var wwwRegexp = regexp.MustCompile(`([^wｗ]|^)([wｗ]+)([^wｗ]|$)`)
+
+func replaceKusa(s string, b *ssml.Builder) {
+	if len(s) == 0 {
+		return
+	}
+
+	offset := 0
+	for _, submatches := range wwwRegexp.FindAllStringSubmatchIndex(s, -1) {
+		preceding := []rune(s[submatches[2]:submatches[3]])
+		following := []rune(s[submatches[6]:submatches[7]])
+
+		st, ed := submatches[4], submatches[5]
+		kusa := s[st:ed]
+		if offset < st {
+			b.Text(s[offset:st])
+		}
+		offset = ed
+
+		if (len(preceding) == 0 || !isAlphabet(preceding[0])) &&
+			(len(following) == 0 || !isAlphabet(following[0])) {
+			b.Sub(kusa, makeKusa(kusa))
+		} else {
+			b.Text(kusa)
+		}
+	}
+	if offset < len(s) {
+		b.Text(s[offset:])
+	}
+}
+
+func isAlphabet(r rune) bool {
+	return (r >= 'a' && r <= 'z') ||
+		(r >= 'A' && r <= 'Z') ||
+		(r >= 'ａ' && r <= 'ｚ') ||
+		(r >= 'Ａ' && r <= 'Ｚ')
+}
+
+func makeKusa(kusa string) string {
+	switch utf8.RuneCountInString(kusa) {
+	case 0:
+		return ""
+	case 1:
+		return "くさ"
+	case 2:
+		return "わらわら"
+	case 3:
+		return "わらわらわら"
+	default:
+		return "だいそうげん"
+	}
 }
 
 func (bot *Bot) handleGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
