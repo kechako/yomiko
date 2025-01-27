@@ -26,7 +26,7 @@ func New(oldnew ...string) *Replacer {
 
 func (r *Replacer) build(oldnew []string) {
 	r.dict = make([]*dicEntry, 0, len(oldnew)/2)
-	for i := 0; i+1 < len(oldnew); i += 1 {
+	for i := 0; i+1 < len(oldnew); i += 2 {
 		r.dict = append(r.dict, &dicEntry{
 			from: oldnew[i],
 			to:   oldnew[i+1],
