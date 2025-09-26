@@ -14,6 +14,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/kechako/yomiko/bot/internal/replacer"
+	"github.com/kechako/yomiko/bot/internal/yomiko"
 	"github.com/kechako/yomiko/ent"
 	"github.com/kechako/yomiko/ent/voicesetting"
 	"github.com/kechako/yomiko/ssml"
@@ -43,10 +44,11 @@ type Bot struct {
 	logger   *slog.Logger
 	commands []*discordgo.ApplicationCommand
 
+	cps      []*tts.CustomPronunciation
 	replacer *replacer.Replacer
 
 	mu       sync.RWMutex
-	sessions map[string]*yomikoSession
+	sessions map[string]*yomiko.Session
 	targets  map[string]string
 
 	exit func()
@@ -87,8 +89,9 @@ func New(ctx context.Context, cfg *Config) (*Bot, error) {
 		tts:      c,
 		ent:      e,
 		logger:   slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
+		cps:      makeCustomPronunciations(cfg),
 		replacer: makeReplacer(cfg),
-		sessions: make(map[string]*yomikoSession),
+		sessions: make(map[string]*yomiko.Session),
 		targets:  make(map[string]string),
 	}
 
@@ -231,7 +234,9 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 		return
 	}
 
-	var opts []tts.SynthesizeSpeechOption
+	opts := []tts.SynthesizeSpeechOption{
+		tts.WithCustomPronunciations(bot.cps),
+	}
 	if vs != nil {
 		if vs.VoiceName != nil {
 			opts = append(opts, tts.WithVoiceName(*vs.VoiceName))
@@ -522,7 +527,7 @@ func (bot *Bot) cleanupApplicationCommands() {
 	}
 }
 
-func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomikoSession, error) {
+func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomiko.Session, error) {
 	defer bot.updateGameStatus()
 
 	bot.mu.Lock()
@@ -533,7 +538,14 @@ func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomi
 		return ys, errYomikoAlreadyJoined
 	}
 
-	ys, err := newYomikoSession(bot.s, bot.tts, guildID, textChannelID, voiceChannelID)
+	ys, err := yomiko.New(&yomiko.Config{
+		Session:        bot.s,
+		TTS:            bot.tts,
+		GuildID:        guildID,
+		TextChannelID:  textChannelID,
+		VoiceChannelID: voiceChannelID,
+		SampleRate:     SampleRate,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("bot.Bot.yomikoJoin: %w", err)
 	}
@@ -668,6 +680,19 @@ func rollback(tx *ent.Tx, err error) error {
 		err = errors.Join(err, rerr)
 	}
 	return err
+}
+
+func makeCustomPronunciations(cfg *Config) []*tts.CustomPronunciation {
+	var cps []*tts.CustomPronunciation
+
+	for _, p := range cfg.Pronunciations {
+		cps = append(cps, &tts.CustomPronunciation{
+			Phrase:        p.Phrase,
+			Pronunciation: p.Pronunciation,
+		})
+	}
+
+	return cps
 }
 
 func makeReplacer(cfg *Config) *replacer.Replacer {

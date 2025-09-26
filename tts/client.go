@@ -2,6 +2,7 @@ package tts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	texttospeech "cloud.google.com/go/texttospeech/apiv1"
@@ -22,6 +23,18 @@ const (
 	MaxPitch        = 20.0
 	MinPitch        = -20.0
 )
+
+type InputMode int
+
+const (
+	Text InputMode = iota
+	SSML
+)
+
+type CustomPronunciation struct {
+	Phrase        string
+	Pronunciation string
+}
 
 type Client struct {
 	opts   *clientOptions
@@ -71,7 +84,7 @@ func (c *Client) ListVoices(ctx context.Context) ([]*Voice, error) {
 	return res.GetVoices(), nil
 }
 
-func (c *Client) SynthesizeSpeech(ctx context.Context, ssml string, opts ...SynthesizeSpeechOption) ([]byte, error) {
+func (c *Client) SynthesizeSpeech(ctx context.Context, input string, opts ...SynthesizeSpeechOption) ([]byte, error) {
 	o := synthesizeSpeechOptions{
 		speakingRate: 1.0,
 		pitch:        0.0,
@@ -80,12 +93,35 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, ssml string, opts ...Synt
 		opt.apply(&o)
 	}
 
+	var customPronunciations *texttospeechpb.CustomPronunciations
+	if len(o.customPronunciations) > 0 {
+		customPronunciations = &texttospeechpb.CustomPronunciations{}
+		for _, cp := range o.customPronunciations {
+			customPronunciations.Pronunciations = append(
+				customPronunciations.Pronunciations,
+				makeCustomPronunciationParams(cp),
+			)
+		}
+	}
+
+	si := &texttospeechpb.SynthesisInput{
+		CustomPronunciations: customPronunciations,
+	}
+	switch o.inputMode {
+	case Text:
+		si.InputSource = &texttospeechpb.SynthesisInput_Text{
+			Text: input,
+		}
+	case SSML:
+		si.InputSource = &texttospeechpb.SynthesisInput_Ssml{
+			Ssml: input,
+		}
+	default:
+		return nil, errors.New("invalid input mode")
+	}
+
 	res, err := c.client.SynthesizeSpeech(ctx, &texttospeechpb.SynthesizeSpeechRequest{
-		Input: &texttospeechpb.SynthesisInput{
-			InputSource: &texttospeechpb.SynthesisInput_Ssml{
-				Ssml: ssml,
-			},
-		},
+		Input: si,
 		Voice: &texttospeechpb.VoiceSelectionParams{
 			LanguageCode: c.opts.languageCode,
 			Name:         o.voiceName,
@@ -106,6 +142,15 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, ssml string, opts ...Synt
 
 func (c *Client) Close() error {
 	return c.client.Close()
+}
+
+func makeCustomPronunciationParams(cp *CustomPronunciation) *texttospeechpb.CustomPronunciationParams {
+	encoding := texttospeechpb.CustomPronunciationParams_PHONETIC_ENCODING_JAPANESE_YOMIGANA
+	return &texttospeechpb.CustomPronunciationParams{
+		Phrase:           &cp.Phrase,
+		PhoneticEncoding: &encoding,
+		Pronunciation:    &cp.Pronunciation,
+	}
 }
 
 type clientOptions struct {
@@ -129,18 +174,14 @@ func (w withCredentialsJSON) apply(o *clientOptions) {
 	copy(o.credentialsJSON, w)
 }
 
-func WithSampleRate(sampleRate int) ClientOption {
-	return withSampleRate(sampleRate)
-}
-
-func WithLanguageCode(code string) ClientOption {
-	return withLanguageCode(code)
-}
-
 type withLanguageCode string
 
 func (w withLanguageCode) apply(o *clientOptions) {
 	o.languageCode = string(w)
+}
+
+func WithLanguageCode(code string) ClientOption {
+	return withLanguageCode(code)
 }
 
 type withSampleRate int
@@ -149,18 +190,30 @@ func (w withSampleRate) apply(o *clientOptions) {
 	o.sampleRate = int(w)
 }
 
+func WithSampleRate(sampleRate int) ClientOption {
+	return withSampleRate(sampleRate)
+}
+
 type synthesizeSpeechOptions struct {
-	voiceName    string
-	speakingRate float64
-	pitch        float64
+	inputMode            InputMode
+	voiceName            string
+	speakingRate         float64
+	pitch                float64
+	customPronunciations []*CustomPronunciation
 }
 
 type SynthesizeSpeechOption interface {
 	apply(opts *synthesizeSpeechOptions)
 }
 
-func WithVoiceName(name string) SynthesizeSpeechOption {
-	return withVoiceName(name)
+type withInputMode InputMode
+
+func (w withInputMode) apply(o *synthesizeSpeechOptions) {
+	o.inputMode = InputMode(w)
+}
+
+func WithInputMode(mode InputMode) SynthesizeSpeechOption {
+	return withInputMode(mode)
 }
 
 type withVoiceName string
@@ -169,8 +222,8 @@ func (w withVoiceName) apply(o *synthesizeSpeechOptions) {
 	o.voiceName = string(w)
 }
 
-func WithSpeakingRate(speakingRate float64) SynthesizeSpeechOption {
-	return withSpeakingRate(speakingRate)
+func WithVoiceName(name string) SynthesizeSpeechOption {
+	return withVoiceName(name)
 }
 
 type withSpeakingRate float64
@@ -179,12 +232,28 @@ func (w withSpeakingRate) apply(o *synthesizeSpeechOptions) {
 	o.speakingRate = float64(w)
 }
 
-func WithPitch(pitch float64) SynthesizeSpeechOption {
-	return withPitch(pitch)
+func WithSpeakingRate(speakingRate float64) SynthesizeSpeechOption {
+	return withSpeakingRate(speakingRate)
 }
 
 type withPitch float64
 
 func (w withPitch) apply(o *synthesizeSpeechOptions) {
 	o.pitch = float64(w)
+}
+
+func WithPitch(pitch float64) SynthesizeSpeechOption {
+	return withPitch(pitch)
+}
+
+type withCustomPronunciations struct {
+	cps []*CustomPronunciation
+}
+
+func (w withCustomPronunciations) apply(o *synthesizeSpeechOptions) {
+	o.customPronunciations = w.cps
+}
+
+func WithCustomPronunciations(cps []*CustomPronunciation) SynthesizeSpeechOption {
+	return withCustomPronunciations{cps}
 }

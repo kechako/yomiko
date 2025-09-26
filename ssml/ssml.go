@@ -1,6 +1,7 @@
 package ssml
 
 import (
+	"bufio"
 	"encoding/xml"
 	"io"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 type Node interface {
 	encode(enc *xml.Encoder) error
+	write(w *bufio.Writer) error
 }
 
 type ParentNode interface {
@@ -36,23 +38,58 @@ func (ssml *SSML) AddNodes(nodes ...Node) {
 	ssml.Nodes = append(ssml.Nodes, nodes...)
 }
 
-func (ssml *SSML) WriteSSML(w io.Writer) {
+func (ssml *SSML) WriteSSML(w io.Writer) error {
 	enc := xml.NewEncoder(w)
 
 	err := ssml.encode(enc)
 	if err != nil {
-		panic("bug: " + err.Error())
+		return err
 	}
 
 	err = enc.Close()
 	if err != nil {
-		panic("bug: " + err.Error())
+		return err
 	}
+
+	return nil
+}
+
+func (ssml *SSML) WriteText(w io.Writer) error {
+	var bw *bufio.Writer
+	if ww, ok := w.(*bufio.Writer); ok {
+		bw = ww
+	} else {
+		bw = bufio.NewWriter(w)
+	}
+
+	err := ssml.write(bw)
+	if err != nil {
+		return err
+	}
+
+	err = bw.Flush()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ssml *SSML) ToSSML() string {
 	var s strings.Builder
-	ssml.WriteSSML(&s)
+	err := ssml.WriteSSML(&s)
+	if err != nil {
+		panic("bug: " + err.Error())
+	}
+	return s.String()
+}
+
+func (ssml *SSML) ToText() string {
+	var s strings.Builder
+	err := ssml.WriteText(&s)
+	if err != nil {
+		panic("bug: " + err.Error())
+	}
 	return s.String()
 }
 
@@ -86,6 +123,17 @@ func (ssml *SSML) encode(enc *xml.Encoder) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (ssml *SSML) write(w *bufio.Writer) error {
+	for _, node := range ssml.Nodes {
+		err := node.write(w)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -130,6 +178,17 @@ func (p *Paragraph) encode(enc *xml.Encoder) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (p *Paragraph) write(w *bufio.Writer) error {
+	for _, node := range p.Nodes {
+		err := node.write(w)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -185,12 +244,31 @@ func (s *Sentence) encode(enc *xml.Encoder) error {
 	return nil
 }
 
+func (s *Sentence) write(w *bufio.Writer) error {
+	for _, node := range s.Nodes {
+		err := node.write(w)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type Text string
 
 var _ Node = Text("")
 
 func (t Text) encode(enc *xml.Encoder) error {
 	return enc.EncodeToken(xml.CharData(t))
+}
+
+func (t Text) write(w *bufio.Writer) error {
+	_, err := w.WriteString(string(t))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type InterpretationType string
@@ -243,6 +321,10 @@ func (sa *SayAs) encode(enc *xml.Encoder) error {
 	}
 
 	return nil
+}
+
+func (sa *SayAs) write(w *bufio.Writer) error {
+	return sa.Text.write(w)
 }
 
 func (sa *SayAs) attrs() []xml.Attr {
@@ -313,5 +395,13 @@ func (sub *Sub) encode(enc *xml.Encoder) error {
 		return err
 	}
 
+	return nil
+}
+
+func (sub *Sub) write(w *bufio.Writer) error {
+	_, err := w.WriteString(sub.Alias)
+	if err != nil {
+		return err
+	}
 	return nil
 }

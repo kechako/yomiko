@@ -10,17 +10,23 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+type Pronunciation struct {
+	Phrase        string `toml:"phrase"`
+	Pronunciation string `toml:"pronunciation"`
+}
+
 type Replacement struct {
 	From string `toml:"from"`
 	To   string `toml:"to"`
 }
 
 type Config struct {
-	Token           string         `toml:"token"`
-	CredentialsJSON string         `toml:"credentials_json"`
-	CredentialsFile string         `toml:"credentials_file"`
-	DatabasePath    string         `toml:"database_path"`
-	Replacements    []*Replacement `toml:"replacements"`
+	Token           string           `toml:"token"`
+	CredentialsJSON string           `toml:"credentials_json"`
+	CredentialsFile string           `toml:"credentials_file"`
+	DatabasePath    string           `toml:"database_path"`
+	Pronunciations  []*Pronunciation `toml:"pronunciations"`
+	Replacements    []*Replacement   `toml:"replacements"`
 }
 
 func ReadConfigFile(name string) (*Config, error) {

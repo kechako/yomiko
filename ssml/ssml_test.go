@@ -32,4 +32,11 @@ func TestSSML(t *testing.T) {
 	if got != want {
 		t.Errorf("SSML.ToSSML():\ngot : %s\nwant: %s", got, want)
 	}
+
+	const textWant = `aaaabbbbABCDEccccいんでっくすdddd`
+
+	textGot := root.ToText()
+	if textGot != textWant {
+		t.Errorf("SSML.ToText():\ngot : %s\nwant: %s", textGot, textWant)
+	}
 }
