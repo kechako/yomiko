@@ -10,11 +10,11 @@ import (
 	"syscall"
 
 	"github.com/kechako/yomiko/bot"
-	"github.com/urfave/cli/v2"
+	cli "github.com/urfave/cli/v3"
 )
 
-func runCommand(c *cli.Context) error {
-	cfgName := c.String("config")
+func runCommand(ctx context.Context, cmd *cli.Command) error {
+	cfgName := cmd.String("config")
 	if cfgName == "" {
 		return errors.New("config file is not specified")
 	}
@@ -27,8 +27,6 @@ func runCommand(c *cli.Context) error {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	ctx := c.Context
-
 	b, err := bot.New(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize bot: %w", err)
@@ -39,7 +37,7 @@ func runCommand(c *cli.Context) error {
 }
 
 func main() {
-	app := &cli.App{
+	cmd := &cli.Command{
 		Name: "yomiko",
 		Commands: []*cli.Command{
 			{
@@ -59,7 +57,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	if err := app.RunContext(ctx, os.Args); err != nil {
+	if err := cmd.Run(ctx, os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "error : %v\n", err)
 
 		var exitCoder cli.ExitCoder
