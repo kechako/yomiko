@@ -1,9 +1,11 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 
+ARG GO_VERSION=1.25.4
+
 #========================================
 # Build
-FROM golang:1.23-bookworm AS builder
+FROM golang:${GO_VERSION}-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -14,9 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopus-dev \
     libopusfile-dev \
 && rm -rf /var/lib/apt/lists/*
-
-# set GOTOOLCHAIN env
-ENV GOTOOLCHAIN=auto
 
 WORKDIR /src/yomiko
 
