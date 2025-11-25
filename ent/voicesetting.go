@@ -47,7 +47,7 @@ func (*VoiceSetting) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the VoiceSetting fields.
-func (vs *VoiceSetting) assignValues(columns []string, values []any) error {
+func (_m *VoiceSetting) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -58,36 +58,36 @@ func (vs *VoiceSetting) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			vs.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case voicesetting.FieldUserID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field user_id", values[i])
 			} else if value.Valid {
-				vs.UserID = value.String
+				_m.UserID = value.String
 			}
 		case voicesetting.FieldVoiceName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field voice_name", values[i])
 			} else if value.Valid {
-				vs.VoiceName = new(string)
-				*vs.VoiceName = value.String
+				_m.VoiceName = new(string)
+				*_m.VoiceName = value.String
 			}
 		case voicesetting.FieldSpeakingRate:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field speaking_rate", values[i])
 			} else if value.Valid {
-				vs.SpeakingRate = new(float64)
-				*vs.SpeakingRate = value.Float64
+				_m.SpeakingRate = new(float64)
+				*_m.SpeakingRate = value.Float64
 			}
 		case voicesetting.FieldPitch:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field pitch", values[i])
 			} else if value.Valid {
-				vs.Pitch = new(float64)
-				*vs.Pitch = value.Float64
+				_m.Pitch = new(float64)
+				*_m.Pitch = value.Float64
 			}
 		default:
-			vs.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -95,47 +95,47 @@ func (vs *VoiceSetting) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the VoiceSetting.
 // This includes values selected through modifiers, order, etc.
-func (vs *VoiceSetting) Value(name string) (ent.Value, error) {
-	return vs.selectValues.Get(name)
+func (_m *VoiceSetting) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this VoiceSetting.
 // Note that you need to call VoiceSetting.Unwrap() before calling this method if this VoiceSetting
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (vs *VoiceSetting) Update() *VoiceSettingUpdateOne {
-	return NewVoiceSettingClient(vs.config).UpdateOne(vs)
+func (_m *VoiceSetting) Update() *VoiceSettingUpdateOne {
+	return NewVoiceSettingClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the VoiceSetting entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (vs *VoiceSetting) Unwrap() *VoiceSetting {
-	_tx, ok := vs.config.driver.(*txDriver)
+func (_m *VoiceSetting) Unwrap() *VoiceSetting {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: VoiceSetting is not a transactional entity")
 	}
-	vs.config.driver = _tx.drv
-	return vs
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (vs *VoiceSetting) String() string {
+func (_m *VoiceSetting) String() string {
 	var builder strings.Builder
 	builder.WriteString("VoiceSetting(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", vs.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("user_id=")
-	builder.WriteString(vs.UserID)
+	builder.WriteString(_m.UserID)
 	builder.WriteString(", ")
-	if v := vs.VoiceName; v != nil {
+	if v := _m.VoiceName; v != nil {
 		builder.WriteString("voice_name=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	if v := vs.SpeakingRate; v != nil {
+	if v := _m.SpeakingRate; v != nil {
 		builder.WriteString("speaking_rate=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")
-	if v := vs.Pitch; v != nil {
+	if v := _m.Pitch; v != nil {
 		builder.WriteString("pitch=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}

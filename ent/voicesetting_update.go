@@ -22,98 +22,98 @@ type VoiceSettingUpdate struct {
 }
 
 // Where appends a list predicates to the VoiceSettingUpdate builder.
-func (vsu *VoiceSettingUpdate) Where(ps ...predicate.VoiceSetting) *VoiceSettingUpdate {
-	vsu.mutation.Where(ps...)
-	return vsu
+func (_u *VoiceSettingUpdate) Where(ps ...predicate.VoiceSetting) *VoiceSettingUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetVoiceName sets the "voice_name" field.
-func (vsu *VoiceSettingUpdate) SetVoiceName(s string) *VoiceSettingUpdate {
-	vsu.mutation.SetVoiceName(s)
-	return vsu
+func (_u *VoiceSettingUpdate) SetVoiceName(v string) *VoiceSettingUpdate {
+	_u.mutation.SetVoiceName(v)
+	return _u
 }
 
 // SetNillableVoiceName sets the "voice_name" field if the given value is not nil.
-func (vsu *VoiceSettingUpdate) SetNillableVoiceName(s *string) *VoiceSettingUpdate {
-	if s != nil {
-		vsu.SetVoiceName(*s)
+func (_u *VoiceSettingUpdate) SetNillableVoiceName(v *string) *VoiceSettingUpdate {
+	if v != nil {
+		_u.SetVoiceName(*v)
 	}
-	return vsu
+	return _u
 }
 
 // ClearVoiceName clears the value of the "voice_name" field.
-func (vsu *VoiceSettingUpdate) ClearVoiceName() *VoiceSettingUpdate {
-	vsu.mutation.ClearVoiceName()
-	return vsu
+func (_u *VoiceSettingUpdate) ClearVoiceName() *VoiceSettingUpdate {
+	_u.mutation.ClearVoiceName()
+	return _u
 }
 
 // SetSpeakingRate sets the "speaking_rate" field.
-func (vsu *VoiceSettingUpdate) SetSpeakingRate(f float64) *VoiceSettingUpdate {
-	vsu.mutation.ResetSpeakingRate()
-	vsu.mutation.SetSpeakingRate(f)
-	return vsu
+func (_u *VoiceSettingUpdate) SetSpeakingRate(v float64) *VoiceSettingUpdate {
+	_u.mutation.ResetSpeakingRate()
+	_u.mutation.SetSpeakingRate(v)
+	return _u
 }
 
 // SetNillableSpeakingRate sets the "speaking_rate" field if the given value is not nil.
-func (vsu *VoiceSettingUpdate) SetNillableSpeakingRate(f *float64) *VoiceSettingUpdate {
-	if f != nil {
-		vsu.SetSpeakingRate(*f)
+func (_u *VoiceSettingUpdate) SetNillableSpeakingRate(v *float64) *VoiceSettingUpdate {
+	if v != nil {
+		_u.SetSpeakingRate(*v)
 	}
-	return vsu
+	return _u
 }
 
-// AddSpeakingRate adds f to the "speaking_rate" field.
-func (vsu *VoiceSettingUpdate) AddSpeakingRate(f float64) *VoiceSettingUpdate {
-	vsu.mutation.AddSpeakingRate(f)
-	return vsu
+// AddSpeakingRate adds value to the "speaking_rate" field.
+func (_u *VoiceSettingUpdate) AddSpeakingRate(v float64) *VoiceSettingUpdate {
+	_u.mutation.AddSpeakingRate(v)
+	return _u
 }
 
 // ClearSpeakingRate clears the value of the "speaking_rate" field.
-func (vsu *VoiceSettingUpdate) ClearSpeakingRate() *VoiceSettingUpdate {
-	vsu.mutation.ClearSpeakingRate()
-	return vsu
+func (_u *VoiceSettingUpdate) ClearSpeakingRate() *VoiceSettingUpdate {
+	_u.mutation.ClearSpeakingRate()
+	return _u
 }
 
 // SetPitch sets the "pitch" field.
-func (vsu *VoiceSettingUpdate) SetPitch(f float64) *VoiceSettingUpdate {
-	vsu.mutation.ResetPitch()
-	vsu.mutation.SetPitch(f)
-	return vsu
+func (_u *VoiceSettingUpdate) SetPitch(v float64) *VoiceSettingUpdate {
+	_u.mutation.ResetPitch()
+	_u.mutation.SetPitch(v)
+	return _u
 }
 
 // SetNillablePitch sets the "pitch" field if the given value is not nil.
-func (vsu *VoiceSettingUpdate) SetNillablePitch(f *float64) *VoiceSettingUpdate {
-	if f != nil {
-		vsu.SetPitch(*f)
+func (_u *VoiceSettingUpdate) SetNillablePitch(v *float64) *VoiceSettingUpdate {
+	if v != nil {
+		_u.SetPitch(*v)
 	}
-	return vsu
+	return _u
 }
 
-// AddPitch adds f to the "pitch" field.
-func (vsu *VoiceSettingUpdate) AddPitch(f float64) *VoiceSettingUpdate {
-	vsu.mutation.AddPitch(f)
-	return vsu
+// AddPitch adds value to the "pitch" field.
+func (_u *VoiceSettingUpdate) AddPitch(v float64) *VoiceSettingUpdate {
+	_u.mutation.AddPitch(v)
+	return _u
 }
 
 // ClearPitch clears the value of the "pitch" field.
-func (vsu *VoiceSettingUpdate) ClearPitch() *VoiceSettingUpdate {
-	vsu.mutation.ClearPitch()
-	return vsu
+func (_u *VoiceSettingUpdate) ClearPitch() *VoiceSettingUpdate {
+	_u.mutation.ClearPitch()
+	return _u
 }
 
 // Mutation returns the VoiceSettingMutation object of the builder.
-func (vsu *VoiceSettingUpdate) Mutation() *VoiceSettingMutation {
-	return vsu.mutation
+func (_u *VoiceSettingUpdate) Mutation() *VoiceSettingMutation {
+	return _u.mutation
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (vsu *VoiceSettingUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, vsu.sqlSave, vsu.mutation, vsu.hooks)
+func (_u *VoiceSettingUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (vsu *VoiceSettingUpdate) SaveX(ctx context.Context) int {
-	affected, err := vsu.Save(ctx)
+func (_u *VoiceSettingUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -121,52 +121,52 @@ func (vsu *VoiceSettingUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (vsu *VoiceSettingUpdate) Exec(ctx context.Context) error {
-	_, err := vsu.Save(ctx)
+func (_u *VoiceSettingUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vsu *VoiceSettingUpdate) ExecX(ctx context.Context) {
-	if err := vsu.Exec(ctx); err != nil {
+func (_u *VoiceSettingUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
-func (vsu *VoiceSettingUpdate) sqlSave(ctx context.Context) (n int, err error) {
+func (_u *VoiceSettingUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(voicesetting.Table, voicesetting.Columns, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
-	if ps := vsu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := vsu.mutation.VoiceName(); ok {
+	if value, ok := _u.mutation.VoiceName(); ok {
 		_spec.SetField(voicesetting.FieldVoiceName, field.TypeString, value)
 	}
-	if vsu.mutation.VoiceNameCleared() {
+	if _u.mutation.VoiceNameCleared() {
 		_spec.ClearField(voicesetting.FieldVoiceName, field.TypeString)
 	}
-	if value, ok := vsu.mutation.SpeakingRate(); ok {
+	if value, ok := _u.mutation.SpeakingRate(); ok {
 		_spec.SetField(voicesetting.FieldSpeakingRate, field.TypeFloat64, value)
 	}
-	if value, ok := vsu.mutation.AddedSpeakingRate(); ok {
+	if value, ok := _u.mutation.AddedSpeakingRate(); ok {
 		_spec.AddField(voicesetting.FieldSpeakingRate, field.TypeFloat64, value)
 	}
-	if vsu.mutation.SpeakingRateCleared() {
+	if _u.mutation.SpeakingRateCleared() {
 		_spec.ClearField(voicesetting.FieldSpeakingRate, field.TypeFloat64)
 	}
-	if value, ok := vsu.mutation.Pitch(); ok {
+	if value, ok := _u.mutation.Pitch(); ok {
 		_spec.SetField(voicesetting.FieldPitch, field.TypeFloat64, value)
 	}
-	if value, ok := vsu.mutation.AddedPitch(); ok {
+	if value, ok := _u.mutation.AddedPitch(); ok {
 		_spec.AddField(voicesetting.FieldPitch, field.TypeFloat64, value)
 	}
-	if vsu.mutation.PitchCleared() {
+	if _u.mutation.PitchCleared() {
 		_spec.ClearField(voicesetting.FieldPitch, field.TypeFloat64)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, vsu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{voicesetting.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -174,8 +174,8 @@ func (vsu *VoiceSettingUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	vsu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // VoiceSettingUpdateOne is the builder for updating a single VoiceSetting entity.
@@ -187,105 +187,105 @@ type VoiceSettingUpdateOne struct {
 }
 
 // SetVoiceName sets the "voice_name" field.
-func (vsuo *VoiceSettingUpdateOne) SetVoiceName(s string) *VoiceSettingUpdateOne {
-	vsuo.mutation.SetVoiceName(s)
-	return vsuo
+func (_u *VoiceSettingUpdateOne) SetVoiceName(v string) *VoiceSettingUpdateOne {
+	_u.mutation.SetVoiceName(v)
+	return _u
 }
 
 // SetNillableVoiceName sets the "voice_name" field if the given value is not nil.
-func (vsuo *VoiceSettingUpdateOne) SetNillableVoiceName(s *string) *VoiceSettingUpdateOne {
-	if s != nil {
-		vsuo.SetVoiceName(*s)
+func (_u *VoiceSettingUpdateOne) SetNillableVoiceName(v *string) *VoiceSettingUpdateOne {
+	if v != nil {
+		_u.SetVoiceName(*v)
 	}
-	return vsuo
+	return _u
 }
 
 // ClearVoiceName clears the value of the "voice_name" field.
-func (vsuo *VoiceSettingUpdateOne) ClearVoiceName() *VoiceSettingUpdateOne {
-	vsuo.mutation.ClearVoiceName()
-	return vsuo
+func (_u *VoiceSettingUpdateOne) ClearVoiceName() *VoiceSettingUpdateOne {
+	_u.mutation.ClearVoiceName()
+	return _u
 }
 
 // SetSpeakingRate sets the "speaking_rate" field.
-func (vsuo *VoiceSettingUpdateOne) SetSpeakingRate(f float64) *VoiceSettingUpdateOne {
-	vsuo.mutation.ResetSpeakingRate()
-	vsuo.mutation.SetSpeakingRate(f)
-	return vsuo
+func (_u *VoiceSettingUpdateOne) SetSpeakingRate(v float64) *VoiceSettingUpdateOne {
+	_u.mutation.ResetSpeakingRate()
+	_u.mutation.SetSpeakingRate(v)
+	return _u
 }
 
 // SetNillableSpeakingRate sets the "speaking_rate" field if the given value is not nil.
-func (vsuo *VoiceSettingUpdateOne) SetNillableSpeakingRate(f *float64) *VoiceSettingUpdateOne {
-	if f != nil {
-		vsuo.SetSpeakingRate(*f)
+func (_u *VoiceSettingUpdateOne) SetNillableSpeakingRate(v *float64) *VoiceSettingUpdateOne {
+	if v != nil {
+		_u.SetSpeakingRate(*v)
 	}
-	return vsuo
+	return _u
 }
 
-// AddSpeakingRate adds f to the "speaking_rate" field.
-func (vsuo *VoiceSettingUpdateOne) AddSpeakingRate(f float64) *VoiceSettingUpdateOne {
-	vsuo.mutation.AddSpeakingRate(f)
-	return vsuo
+// AddSpeakingRate adds value to the "speaking_rate" field.
+func (_u *VoiceSettingUpdateOne) AddSpeakingRate(v float64) *VoiceSettingUpdateOne {
+	_u.mutation.AddSpeakingRate(v)
+	return _u
 }
 
 // ClearSpeakingRate clears the value of the "speaking_rate" field.
-func (vsuo *VoiceSettingUpdateOne) ClearSpeakingRate() *VoiceSettingUpdateOne {
-	vsuo.mutation.ClearSpeakingRate()
-	return vsuo
+func (_u *VoiceSettingUpdateOne) ClearSpeakingRate() *VoiceSettingUpdateOne {
+	_u.mutation.ClearSpeakingRate()
+	return _u
 }
 
 // SetPitch sets the "pitch" field.
-func (vsuo *VoiceSettingUpdateOne) SetPitch(f float64) *VoiceSettingUpdateOne {
-	vsuo.mutation.ResetPitch()
-	vsuo.mutation.SetPitch(f)
-	return vsuo
+func (_u *VoiceSettingUpdateOne) SetPitch(v float64) *VoiceSettingUpdateOne {
+	_u.mutation.ResetPitch()
+	_u.mutation.SetPitch(v)
+	return _u
 }
 
 // SetNillablePitch sets the "pitch" field if the given value is not nil.
-func (vsuo *VoiceSettingUpdateOne) SetNillablePitch(f *float64) *VoiceSettingUpdateOne {
-	if f != nil {
-		vsuo.SetPitch(*f)
+func (_u *VoiceSettingUpdateOne) SetNillablePitch(v *float64) *VoiceSettingUpdateOne {
+	if v != nil {
+		_u.SetPitch(*v)
 	}
-	return vsuo
+	return _u
 }
 
-// AddPitch adds f to the "pitch" field.
-func (vsuo *VoiceSettingUpdateOne) AddPitch(f float64) *VoiceSettingUpdateOne {
-	vsuo.mutation.AddPitch(f)
-	return vsuo
+// AddPitch adds value to the "pitch" field.
+func (_u *VoiceSettingUpdateOne) AddPitch(v float64) *VoiceSettingUpdateOne {
+	_u.mutation.AddPitch(v)
+	return _u
 }
 
 // ClearPitch clears the value of the "pitch" field.
-func (vsuo *VoiceSettingUpdateOne) ClearPitch() *VoiceSettingUpdateOne {
-	vsuo.mutation.ClearPitch()
-	return vsuo
+func (_u *VoiceSettingUpdateOne) ClearPitch() *VoiceSettingUpdateOne {
+	_u.mutation.ClearPitch()
+	return _u
 }
 
 // Mutation returns the VoiceSettingMutation object of the builder.
-func (vsuo *VoiceSettingUpdateOne) Mutation() *VoiceSettingMutation {
-	return vsuo.mutation
+func (_u *VoiceSettingUpdateOne) Mutation() *VoiceSettingMutation {
+	return _u.mutation
 }
 
 // Where appends a list predicates to the VoiceSettingUpdate builder.
-func (vsuo *VoiceSettingUpdateOne) Where(ps ...predicate.VoiceSetting) *VoiceSettingUpdateOne {
-	vsuo.mutation.Where(ps...)
-	return vsuo
+func (_u *VoiceSettingUpdateOne) Where(ps ...predicate.VoiceSetting) *VoiceSettingUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (vsuo *VoiceSettingUpdateOne) Select(field string, fields ...string) *VoiceSettingUpdateOne {
-	vsuo.fields = append([]string{field}, fields...)
-	return vsuo
+func (_u *VoiceSettingUpdateOne) Select(field string, fields ...string) *VoiceSettingUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated VoiceSetting entity.
-func (vsuo *VoiceSettingUpdateOne) Save(ctx context.Context) (*VoiceSetting, error) {
-	return withHooks(ctx, vsuo.sqlSave, vsuo.mutation, vsuo.hooks)
+func (_u *VoiceSettingUpdateOne) Save(ctx context.Context) (*VoiceSetting, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (vsuo *VoiceSettingUpdateOne) SaveX(ctx context.Context) *VoiceSetting {
-	node, err := vsuo.Save(ctx)
+func (_u *VoiceSettingUpdateOne) SaveX(ctx context.Context) *VoiceSetting {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -293,26 +293,26 @@ func (vsuo *VoiceSettingUpdateOne) SaveX(ctx context.Context) *VoiceSetting {
 }
 
 // Exec executes the query on the entity.
-func (vsuo *VoiceSettingUpdateOne) Exec(ctx context.Context) error {
-	_, err := vsuo.Save(ctx)
+func (_u *VoiceSettingUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vsuo *VoiceSettingUpdateOne) ExecX(ctx context.Context) {
-	if err := vsuo.Exec(ctx); err != nil {
+func (_u *VoiceSettingUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
-func (vsuo *VoiceSettingUpdateOne) sqlSave(ctx context.Context) (_node *VoiceSetting, err error) {
+func (_u *VoiceSettingUpdateOne) sqlSave(ctx context.Context) (_node *VoiceSetting, err error) {
 	_spec := sqlgraph.NewUpdateSpec(voicesetting.Table, voicesetting.Columns, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
-	id, ok := vsuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "VoiceSetting.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := vsuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, voicesetting.FieldID)
 		for _, f := range fields {
@@ -324,41 +324,41 @@ func (vsuo *VoiceSettingUpdateOne) sqlSave(ctx context.Context) (_node *VoiceSet
 			}
 		}
 	}
-	if ps := vsuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := vsuo.mutation.VoiceName(); ok {
+	if value, ok := _u.mutation.VoiceName(); ok {
 		_spec.SetField(voicesetting.FieldVoiceName, field.TypeString, value)
 	}
-	if vsuo.mutation.VoiceNameCleared() {
+	if _u.mutation.VoiceNameCleared() {
 		_spec.ClearField(voicesetting.FieldVoiceName, field.TypeString)
 	}
-	if value, ok := vsuo.mutation.SpeakingRate(); ok {
+	if value, ok := _u.mutation.SpeakingRate(); ok {
 		_spec.SetField(voicesetting.FieldSpeakingRate, field.TypeFloat64, value)
 	}
-	if value, ok := vsuo.mutation.AddedSpeakingRate(); ok {
+	if value, ok := _u.mutation.AddedSpeakingRate(); ok {
 		_spec.AddField(voicesetting.FieldSpeakingRate, field.TypeFloat64, value)
 	}
-	if vsuo.mutation.SpeakingRateCleared() {
+	if _u.mutation.SpeakingRateCleared() {
 		_spec.ClearField(voicesetting.FieldSpeakingRate, field.TypeFloat64)
 	}
-	if value, ok := vsuo.mutation.Pitch(); ok {
+	if value, ok := _u.mutation.Pitch(); ok {
 		_spec.SetField(voicesetting.FieldPitch, field.TypeFloat64, value)
 	}
-	if value, ok := vsuo.mutation.AddedPitch(); ok {
+	if value, ok := _u.mutation.AddedPitch(); ok {
 		_spec.AddField(voicesetting.FieldPitch, field.TypeFloat64, value)
 	}
-	if vsuo.mutation.PitchCleared() {
+	if _u.mutation.PitchCleared() {
 		_spec.ClearField(voicesetting.FieldPitch, field.TypeFloat64)
 	}
-	_node = &VoiceSetting{config: vsuo.config}
+	_node = &VoiceSetting{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, vsuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{voicesetting.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -366,6 +366,6 @@ func (vsuo *VoiceSettingUpdateOne) sqlSave(ctx context.Context) (_node *VoiceSet
 		}
 		return nil, err
 	}
-	vsuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

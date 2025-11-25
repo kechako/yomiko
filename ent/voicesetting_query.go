@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -27,40 +28,40 @@ type VoiceSettingQuery struct {
 }
 
 // Where adds a new predicate for the VoiceSettingQuery builder.
-func (vsq *VoiceSettingQuery) Where(ps ...predicate.VoiceSetting) *VoiceSettingQuery {
-	vsq.predicates = append(vsq.predicates, ps...)
-	return vsq
+func (_q *VoiceSettingQuery) Where(ps ...predicate.VoiceSetting) *VoiceSettingQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (vsq *VoiceSettingQuery) Limit(limit int) *VoiceSettingQuery {
-	vsq.ctx.Limit = &limit
-	return vsq
+func (_q *VoiceSettingQuery) Limit(limit int) *VoiceSettingQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (vsq *VoiceSettingQuery) Offset(offset int) *VoiceSettingQuery {
-	vsq.ctx.Offset = &offset
-	return vsq
+func (_q *VoiceSettingQuery) Offset(offset int) *VoiceSettingQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (vsq *VoiceSettingQuery) Unique(unique bool) *VoiceSettingQuery {
-	vsq.ctx.Unique = &unique
-	return vsq
+func (_q *VoiceSettingQuery) Unique(unique bool) *VoiceSettingQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (vsq *VoiceSettingQuery) Order(o ...voicesetting.OrderOption) *VoiceSettingQuery {
-	vsq.order = append(vsq.order, o...)
-	return vsq
+func (_q *VoiceSettingQuery) Order(o ...voicesetting.OrderOption) *VoiceSettingQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // First returns the first VoiceSetting entity from the query.
 // Returns a *NotFoundError when no VoiceSetting was found.
-func (vsq *VoiceSettingQuery) First(ctx context.Context) (*VoiceSetting, error) {
-	nodes, err := vsq.Limit(1).All(setContextOp(ctx, vsq.ctx, "First"))
+func (_q *VoiceSettingQuery) First(ctx context.Context) (*VoiceSetting, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +72,8 @@ func (vsq *VoiceSettingQuery) First(ctx context.Context) (*VoiceSetting, error) 
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) FirstX(ctx context.Context) *VoiceSetting {
-	node, err := vsq.First(ctx)
+func (_q *VoiceSettingQuery) FirstX(ctx context.Context) *VoiceSetting {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -81,9 +82,9 @@ func (vsq *VoiceSettingQuery) FirstX(ctx context.Context) *VoiceSetting {
 
 // FirstID returns the first VoiceSetting ID from the query.
 // Returns a *NotFoundError when no VoiceSetting ID was found.
-func (vsq *VoiceSettingQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *VoiceSettingQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = vsq.Limit(1).IDs(setContextOp(ctx, vsq.ctx, "FirstID")); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -94,8 +95,8 @@ func (vsq *VoiceSettingQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) FirstIDX(ctx context.Context) int {
-	id, err := vsq.FirstID(ctx)
+func (_q *VoiceSettingQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -105,8 +106,8 @@ func (vsq *VoiceSettingQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single VoiceSetting entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one VoiceSetting entity is found.
 // Returns a *NotFoundError when no VoiceSetting entities are found.
-func (vsq *VoiceSettingQuery) Only(ctx context.Context) (*VoiceSetting, error) {
-	nodes, err := vsq.Limit(2).All(setContextOp(ctx, vsq.ctx, "Only"))
+func (_q *VoiceSettingQuery) Only(ctx context.Context) (*VoiceSetting, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +122,8 @@ func (vsq *VoiceSettingQuery) Only(ctx context.Context) (*VoiceSetting, error) {
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) OnlyX(ctx context.Context) *VoiceSetting {
-	node, err := vsq.Only(ctx)
+func (_q *VoiceSettingQuery) OnlyX(ctx context.Context) *VoiceSetting {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -132,9 +133,9 @@ func (vsq *VoiceSettingQuery) OnlyX(ctx context.Context) *VoiceSetting {
 // OnlyID is like Only, but returns the only VoiceSetting ID in the query.
 // Returns a *NotSingularError when more than one VoiceSetting ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (vsq *VoiceSettingQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *VoiceSettingQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = vsq.Limit(2).IDs(setContextOp(ctx, vsq.ctx, "OnlyID")); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -149,8 +150,8 @@ func (vsq *VoiceSettingQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) OnlyIDX(ctx context.Context) int {
-	id, err := vsq.OnlyID(ctx)
+func (_q *VoiceSettingQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -158,18 +159,18 @@ func (vsq *VoiceSettingQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of VoiceSettings.
-func (vsq *VoiceSettingQuery) All(ctx context.Context) ([]*VoiceSetting, error) {
-	ctx = setContextOp(ctx, vsq.ctx, "All")
-	if err := vsq.prepareQuery(ctx); err != nil {
+func (_q *VoiceSettingQuery) All(ctx context.Context) ([]*VoiceSetting, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*VoiceSetting, *VoiceSettingQuery]()
-	return withInterceptors[[]*VoiceSetting](ctx, vsq, qr, vsq.inters)
+	return withInterceptors[[]*VoiceSetting](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) AllX(ctx context.Context) []*VoiceSetting {
-	nodes, err := vsq.All(ctx)
+func (_q *VoiceSettingQuery) AllX(ctx context.Context) []*VoiceSetting {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -177,20 +178,20 @@ func (vsq *VoiceSettingQuery) AllX(ctx context.Context) []*VoiceSetting {
 }
 
 // IDs executes the query and returns a list of VoiceSetting IDs.
-func (vsq *VoiceSettingQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if vsq.ctx.Unique == nil && vsq.path != nil {
-		vsq.Unique(true)
+func (_q *VoiceSettingQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, vsq.ctx, "IDs")
-	if err = vsq.Select(voicesetting.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(voicesetting.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) IDsX(ctx context.Context) []int {
-	ids, err := vsq.IDs(ctx)
+func (_q *VoiceSettingQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -198,17 +199,17 @@ func (vsq *VoiceSettingQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (vsq *VoiceSettingQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, vsq.ctx, "Count")
-	if err := vsq.prepareQuery(ctx); err != nil {
+func (_q *VoiceSettingQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, vsq, querierCount[*VoiceSettingQuery](), vsq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*VoiceSettingQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) CountX(ctx context.Context) int {
-	count, err := vsq.Count(ctx)
+func (_q *VoiceSettingQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -216,9 +217,9 @@ func (vsq *VoiceSettingQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (vsq *VoiceSettingQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, vsq.ctx, "Exist")
-	switch _, err := vsq.FirstID(ctx); {
+func (_q *VoiceSettingQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -229,8 +230,8 @@ func (vsq *VoiceSettingQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (vsq *VoiceSettingQuery) ExistX(ctx context.Context) bool {
-	exist, err := vsq.Exist(ctx)
+func (_q *VoiceSettingQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -239,19 +240,19 @@ func (vsq *VoiceSettingQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the VoiceSettingQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (vsq *VoiceSettingQuery) Clone() *VoiceSettingQuery {
-	if vsq == nil {
+func (_q *VoiceSettingQuery) Clone() *VoiceSettingQuery {
+	if _q == nil {
 		return nil
 	}
 	return &VoiceSettingQuery{
-		config:     vsq.config,
-		ctx:        vsq.ctx.Clone(),
-		order:      append([]voicesetting.OrderOption{}, vsq.order...),
-		inters:     append([]Interceptor{}, vsq.inters...),
-		predicates: append([]predicate.VoiceSetting{}, vsq.predicates...),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]voicesetting.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.VoiceSetting{}, _q.predicates...),
 		// clone intermediate query.
-		sql:  vsq.sql.Clone(),
-		path: vsq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
@@ -269,10 +270,10 @@ func (vsq *VoiceSettingQuery) Clone() *VoiceSettingQuery {
 //		GroupBy(voicesetting.FieldUserID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (vsq *VoiceSettingQuery) GroupBy(field string, fields ...string) *VoiceSettingGroupBy {
-	vsq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &VoiceSettingGroupBy{build: vsq}
-	grbuild.flds = &vsq.ctx.Fields
+func (_q *VoiceSettingQuery) GroupBy(field string, fields ...string) *VoiceSettingGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &VoiceSettingGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = voicesetting.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -290,62 +291,62 @@ func (vsq *VoiceSettingQuery) GroupBy(field string, fields ...string) *VoiceSett
 //	client.VoiceSetting.Query().
 //		Select(voicesetting.FieldUserID).
 //		Scan(ctx, &v)
-func (vsq *VoiceSettingQuery) Select(fields ...string) *VoiceSettingSelect {
-	vsq.ctx.Fields = append(vsq.ctx.Fields, fields...)
-	sbuild := &VoiceSettingSelect{VoiceSettingQuery: vsq}
+func (_q *VoiceSettingQuery) Select(fields ...string) *VoiceSettingSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &VoiceSettingSelect{VoiceSettingQuery: _q}
 	sbuild.label = voicesetting.Label
-	sbuild.flds, sbuild.scan = &vsq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a VoiceSettingSelect configured with the given aggregations.
-func (vsq *VoiceSettingQuery) Aggregate(fns ...AggregateFunc) *VoiceSettingSelect {
-	return vsq.Select().Aggregate(fns...)
+func (_q *VoiceSettingQuery) Aggregate(fns ...AggregateFunc) *VoiceSettingSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (vsq *VoiceSettingQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range vsq.inters {
+func (_q *VoiceSettingQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, vsq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range vsq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !voicesetting.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if vsq.path != nil {
-		prev, err := vsq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		vsq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (vsq *VoiceSettingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*VoiceSetting, error) {
+func (_q *VoiceSettingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*VoiceSetting, error) {
 	var (
 		nodes = []*VoiceSetting{}
-		_spec = vsq.querySpec()
+		_spec = _q.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*VoiceSetting).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &VoiceSetting{config: vsq.config}
+		node := &VoiceSetting{config: _q.config}
 		nodes = append(nodes, node)
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, vsq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
@@ -354,24 +355,24 @@ func (vsq *VoiceSettingQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	return nodes, nil
 }
 
-func (vsq *VoiceSettingQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := vsq.querySpec()
-	_spec.Node.Columns = vsq.ctx.Fields
-	if len(vsq.ctx.Fields) > 0 {
-		_spec.Unique = vsq.ctx.Unique != nil && *vsq.ctx.Unique
+func (_q *VoiceSettingQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, vsq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (vsq *VoiceSettingQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *VoiceSettingQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(voicesetting.Table, voicesetting.Columns, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
-	_spec.From = vsq.sql
-	if unique := vsq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if vsq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := vsq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, voicesetting.FieldID)
 		for i := range fields {
@@ -380,20 +381,20 @@ func (vsq *VoiceSettingQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := vsq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := vsq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := vsq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := vsq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -403,33 +404,33 @@ func (vsq *VoiceSettingQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (vsq *VoiceSettingQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(vsq.driver.Dialect())
+func (_q *VoiceSettingQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(voicesetting.Table)
-	columns := vsq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = voicesetting.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if vsq.sql != nil {
-		selector = vsq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if vsq.ctx.Unique != nil && *vsq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range vsq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range vsq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := vsq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := vsq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -442,41 +443,41 @@ type VoiceSettingGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (vsgb *VoiceSettingGroupBy) Aggregate(fns ...AggregateFunc) *VoiceSettingGroupBy {
-	vsgb.fns = append(vsgb.fns, fns...)
-	return vsgb
+func (_g *VoiceSettingGroupBy) Aggregate(fns ...AggregateFunc) *VoiceSettingGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (vsgb *VoiceSettingGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, vsgb.build.ctx, "GroupBy")
-	if err := vsgb.build.prepareQuery(ctx); err != nil {
+func (_g *VoiceSettingGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*VoiceSettingQuery, *VoiceSettingGroupBy](ctx, vsgb.build, vsgb, vsgb.build.inters, v)
+	return scanWithInterceptors[*VoiceSettingQuery, *VoiceSettingGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (vsgb *VoiceSettingGroupBy) sqlScan(ctx context.Context, root *VoiceSettingQuery, v any) error {
+func (_g *VoiceSettingGroupBy) sqlScan(ctx context.Context, root *VoiceSettingQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(vsgb.fns))
-	for _, fn := range vsgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*vsgb.flds)+len(vsgb.fns))
-		for _, f := range *vsgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*vsgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := vsgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -490,27 +491,27 @@ type VoiceSettingSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (vss *VoiceSettingSelect) Aggregate(fns ...AggregateFunc) *VoiceSettingSelect {
-	vss.fns = append(vss.fns, fns...)
-	return vss
+func (_s *VoiceSettingSelect) Aggregate(fns ...AggregateFunc) *VoiceSettingSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (vss *VoiceSettingSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, vss.ctx, "Select")
-	if err := vss.prepareQuery(ctx); err != nil {
+func (_s *VoiceSettingSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*VoiceSettingQuery, *VoiceSettingSelect](ctx, vss.VoiceSettingQuery, vss, vss.inters, v)
+	return scanWithInterceptors[*VoiceSettingQuery, *VoiceSettingSelect](ctx, _s.VoiceSettingQuery, _s, _s.inters, v)
 }
 
-func (vss *VoiceSettingSelect) sqlScan(ctx context.Context, root *VoiceSettingQuery, v any) error {
+func (_s *VoiceSettingSelect) sqlScan(ctx context.Context, root *VoiceSettingQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(vss.fns))
-	for _, fn := range vss.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*vss.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -518,7 +519,7 @@ func (vss *VoiceSettingSelect) sqlScan(ctx context.Context, root *VoiceSettingQu
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := vss.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

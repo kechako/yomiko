@@ -20,56 +20,56 @@ type VoiceSettingDelete struct {
 }
 
 // Where appends a list predicates to the VoiceSettingDelete builder.
-func (vsd *VoiceSettingDelete) Where(ps ...predicate.VoiceSetting) *VoiceSettingDelete {
-	vsd.mutation.Where(ps...)
-	return vsd
+func (_d *VoiceSettingDelete) Where(ps ...predicate.VoiceSetting) *VoiceSettingDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (vsd *VoiceSettingDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, vsd.sqlExec, vsd.mutation, vsd.hooks)
+func (_d *VoiceSettingDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vsd *VoiceSettingDelete) ExecX(ctx context.Context) int {
-	n, err := vsd.Exec(ctx)
+func (_d *VoiceSettingDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (vsd *VoiceSettingDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *VoiceSettingDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(voicesetting.Table, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
-	if ps := vsd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, vsd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	vsd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // VoiceSettingDeleteOne is the builder for deleting a single VoiceSetting entity.
 type VoiceSettingDeleteOne struct {
-	vsd *VoiceSettingDelete
+	_d *VoiceSettingDelete
 }
 
 // Where appends a list predicates to the VoiceSettingDelete builder.
-func (vsdo *VoiceSettingDeleteOne) Where(ps ...predicate.VoiceSetting) *VoiceSettingDeleteOne {
-	vsdo.vsd.mutation.Where(ps...)
-	return vsdo
+func (_d *VoiceSettingDeleteOne) Where(ps ...predicate.VoiceSetting) *VoiceSettingDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (vsdo *VoiceSettingDeleteOne) Exec(ctx context.Context) error {
-	n, err := vsdo.vsd.Exec(ctx)
+func (_d *VoiceSettingDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (vsdo *VoiceSettingDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vsdo *VoiceSettingDeleteOne) ExecX(ctx context.Context) {
-	if err := vsdo.Exec(ctx); err != nil {
+func (_d *VoiceSettingDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

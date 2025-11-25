@@ -251,8 +251,8 @@ func (c *VoiceSettingClient) Update() *VoiceSettingUpdate {
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *VoiceSettingClient) UpdateOne(vs *VoiceSetting) *VoiceSettingUpdateOne {
-	mutation := newVoiceSettingMutation(c.config, OpUpdateOne, withVoiceSetting(vs))
+func (c *VoiceSettingClient) UpdateOne(_m *VoiceSetting) *VoiceSettingUpdateOne {
+	mutation := newVoiceSettingMutation(c.config, OpUpdateOne, withVoiceSetting(_m))
 	return &VoiceSettingUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
@@ -269,8 +269,8 @@ func (c *VoiceSettingClient) Delete() *VoiceSettingDelete {
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *VoiceSettingClient) DeleteOne(vs *VoiceSetting) *VoiceSettingDeleteOne {
-	return c.DeleteOneID(vs.ID)
+func (c *VoiceSettingClient) DeleteOne(_m *VoiceSetting) *VoiceSettingDeleteOne {
+	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.

@@ -20,66 +20,66 @@ type VoiceSettingCreate struct {
 }
 
 // SetUserID sets the "user_id" field.
-func (vsc *VoiceSettingCreate) SetUserID(s string) *VoiceSettingCreate {
-	vsc.mutation.SetUserID(s)
-	return vsc
+func (_c *VoiceSettingCreate) SetUserID(v string) *VoiceSettingCreate {
+	_c.mutation.SetUserID(v)
+	return _c
 }
 
 // SetVoiceName sets the "voice_name" field.
-func (vsc *VoiceSettingCreate) SetVoiceName(s string) *VoiceSettingCreate {
-	vsc.mutation.SetVoiceName(s)
-	return vsc
+func (_c *VoiceSettingCreate) SetVoiceName(v string) *VoiceSettingCreate {
+	_c.mutation.SetVoiceName(v)
+	return _c
 }
 
 // SetNillableVoiceName sets the "voice_name" field if the given value is not nil.
-func (vsc *VoiceSettingCreate) SetNillableVoiceName(s *string) *VoiceSettingCreate {
-	if s != nil {
-		vsc.SetVoiceName(*s)
+func (_c *VoiceSettingCreate) SetNillableVoiceName(v *string) *VoiceSettingCreate {
+	if v != nil {
+		_c.SetVoiceName(*v)
 	}
-	return vsc
+	return _c
 }
 
 // SetSpeakingRate sets the "speaking_rate" field.
-func (vsc *VoiceSettingCreate) SetSpeakingRate(f float64) *VoiceSettingCreate {
-	vsc.mutation.SetSpeakingRate(f)
-	return vsc
+func (_c *VoiceSettingCreate) SetSpeakingRate(v float64) *VoiceSettingCreate {
+	_c.mutation.SetSpeakingRate(v)
+	return _c
 }
 
 // SetNillableSpeakingRate sets the "speaking_rate" field if the given value is not nil.
-func (vsc *VoiceSettingCreate) SetNillableSpeakingRate(f *float64) *VoiceSettingCreate {
-	if f != nil {
-		vsc.SetSpeakingRate(*f)
+func (_c *VoiceSettingCreate) SetNillableSpeakingRate(v *float64) *VoiceSettingCreate {
+	if v != nil {
+		_c.SetSpeakingRate(*v)
 	}
-	return vsc
+	return _c
 }
 
 // SetPitch sets the "pitch" field.
-func (vsc *VoiceSettingCreate) SetPitch(f float64) *VoiceSettingCreate {
-	vsc.mutation.SetPitch(f)
-	return vsc
+func (_c *VoiceSettingCreate) SetPitch(v float64) *VoiceSettingCreate {
+	_c.mutation.SetPitch(v)
+	return _c
 }
 
 // SetNillablePitch sets the "pitch" field if the given value is not nil.
-func (vsc *VoiceSettingCreate) SetNillablePitch(f *float64) *VoiceSettingCreate {
-	if f != nil {
-		vsc.SetPitch(*f)
+func (_c *VoiceSettingCreate) SetNillablePitch(v *float64) *VoiceSettingCreate {
+	if v != nil {
+		_c.SetPitch(*v)
 	}
-	return vsc
+	return _c
 }
 
 // Mutation returns the VoiceSettingMutation object of the builder.
-func (vsc *VoiceSettingCreate) Mutation() *VoiceSettingMutation {
-	return vsc.mutation
+func (_c *VoiceSettingCreate) Mutation() *VoiceSettingMutation {
+	return _c.mutation
 }
 
 // Save creates the VoiceSetting in the database.
-func (vsc *VoiceSettingCreate) Save(ctx context.Context) (*VoiceSetting, error) {
-	return withHooks(ctx, vsc.sqlSave, vsc.mutation, vsc.hooks)
+func (_c *VoiceSettingCreate) Save(ctx context.Context) (*VoiceSetting, error) {
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (vsc *VoiceSettingCreate) SaveX(ctx context.Context) *VoiceSetting {
-	v, err := vsc.Save(ctx)
+func (_c *VoiceSettingCreate) SaveX(ctx context.Context) *VoiceSetting {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -87,24 +87,24 @@ func (vsc *VoiceSettingCreate) SaveX(ctx context.Context) *VoiceSetting {
 }
 
 // Exec executes the query.
-func (vsc *VoiceSettingCreate) Exec(ctx context.Context) error {
-	_, err := vsc.Save(ctx)
+func (_c *VoiceSettingCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vsc *VoiceSettingCreate) ExecX(ctx context.Context) {
-	if err := vsc.Exec(ctx); err != nil {
+func (_c *VoiceSettingCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (vsc *VoiceSettingCreate) check() error {
-	if _, ok := vsc.mutation.UserID(); !ok {
+func (_c *VoiceSettingCreate) check() error {
+	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "VoiceSetting.user_id"`)}
 	}
-	if v, ok := vsc.mutation.UserID(); ok {
+	if v, ok := _c.mutation.UserID(); ok {
 		if err := voicesetting.UserIDValidator(v); err != nil {
 			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VoiceSetting.user_id": %w`, err)}
 		}
@@ -112,12 +112,12 @@ func (vsc *VoiceSettingCreate) check() error {
 	return nil
 }
 
-func (vsc *VoiceSettingCreate) sqlSave(ctx context.Context) (*VoiceSetting, error) {
-	if err := vsc.check(); err != nil {
+func (_c *VoiceSettingCreate) sqlSave(ctx context.Context) (*VoiceSetting, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := vsc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, vsc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -125,29 +125,29 @@ func (vsc *VoiceSettingCreate) sqlSave(ctx context.Context) (*VoiceSetting, erro
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	vsc.mutation.id = &_node.ID
-	vsc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (vsc *VoiceSettingCreate) createSpec() (*VoiceSetting, *sqlgraph.CreateSpec) {
+func (_c *VoiceSettingCreate) createSpec() (*VoiceSetting, *sqlgraph.CreateSpec) {
 	var (
-		_node = &VoiceSetting{config: vsc.config}
+		_node = &VoiceSetting{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(voicesetting.Table, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
 	)
-	if value, ok := vsc.mutation.UserID(); ok {
+	if value, ok := _c.mutation.UserID(); ok {
 		_spec.SetField(voicesetting.FieldUserID, field.TypeString, value)
 		_node.UserID = value
 	}
-	if value, ok := vsc.mutation.VoiceName(); ok {
+	if value, ok := _c.mutation.VoiceName(); ok {
 		_spec.SetField(voicesetting.FieldVoiceName, field.TypeString, value)
 		_node.VoiceName = &value
 	}
-	if value, ok := vsc.mutation.SpeakingRate(); ok {
+	if value, ok := _c.mutation.SpeakingRate(); ok {
 		_spec.SetField(voicesetting.FieldSpeakingRate, field.TypeFloat64, value)
 		_node.SpeakingRate = &value
 	}
-	if value, ok := vsc.mutation.Pitch(); ok {
+	if value, ok := _c.mutation.Pitch(); ok {
 		_spec.SetField(voicesetting.FieldPitch, field.TypeFloat64, value)
 		_node.Pitch = &value
 	}
@@ -162,16 +162,16 @@ type VoiceSettingCreateBulk struct {
 }
 
 // Save creates the VoiceSetting entities in the database.
-func (vscb *VoiceSettingCreateBulk) Save(ctx context.Context) ([]*VoiceSetting, error) {
-	if vscb.err != nil {
-		return nil, vscb.err
+func (_c *VoiceSettingCreateBulk) Save(ctx context.Context) ([]*VoiceSetting, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(vscb.builders))
-	nodes := make([]*VoiceSetting, len(vscb.builders))
-	mutators := make([]Mutator, len(vscb.builders))
-	for i := range vscb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*VoiceSetting, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := vscb.builders[i]
+			builder := _c.builders[i]
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*VoiceSettingMutation)
 				if !ok {
@@ -184,11 +184,11 @@ func (vscb *VoiceSettingCreateBulk) Save(ctx context.Context) ([]*VoiceSetting, 
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, vscb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, vscb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -212,7 +212,7 @@ func (vscb *VoiceSettingCreateBulk) Save(ctx context.Context) ([]*VoiceSetting, 
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, vscb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -220,8 +220,8 @@ func (vscb *VoiceSettingCreateBulk) Save(ctx context.Context) ([]*VoiceSetting, 
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (vscb *VoiceSettingCreateBulk) SaveX(ctx context.Context) []*VoiceSetting {
-	v, err := vscb.Save(ctx)
+func (_c *VoiceSettingCreateBulk) SaveX(ctx context.Context) []*VoiceSetting {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -229,14 +229,14 @@ func (vscb *VoiceSettingCreateBulk) SaveX(ctx context.Context) []*VoiceSetting {
 }
 
 // Exec executes the query.
-func (vscb *VoiceSettingCreateBulk) Exec(ctx context.Context) error {
-	_, err := vscb.Save(ctx)
+func (_c *VoiceSettingCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vscb *VoiceSettingCreateBulk) ExecX(ctx context.Context) {
-	if err := vscb.Exec(ctx); err != nil {
+func (_c *VoiceSettingCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
