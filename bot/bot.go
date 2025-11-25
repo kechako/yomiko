@@ -379,7 +379,7 @@ func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.I
 					},
 				},
 			}
-		case "voice":
+		case "male-voice", "female-voice", "neutral-voice":
 			voiceName := subCmd.Options[0].Value.(string)
 
 			userID := event.Member.User.ID

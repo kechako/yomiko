@@ -13,22 +13,25 @@ func (bot *Bot) getApplicationCommands(ctx context.Context) ([]*discordgo.Applic
 	if err != nil {
 		return nil, fmt.Errorf("bot.Bot.getApplicationCommands: %w", err)
 	}
-	voiceChoices := make([]*discordgo.ApplicationCommandOptionChoice, len(voices))
-	for i, voice := range voices {
+	voiceChoices := make(map[string][]*discordgo.ApplicationCommandOptionChoice)
+	for _, voice := range voices {
 		var gender string
 		switch voice.SsmlGender {
 		case tts.GenderMale:
-			gender = "男性"
+			gender = "male"
 		case tts.GenderFemale:
-			gender = "女性"
+			gender = "female"
 		case tts.GenderNeutral:
-			gender = "中性"
+			// 現在 neutral は ja-JP に存在しないみたいなので使用しない
+			continue
 		}
 
-		voiceChoices[i] = &discordgo.ApplicationCommandOptionChoice{
-			Name:  fmt.Sprintf("%s (%s)", voice.Name, gender),
+		choice := &discordgo.ApplicationCommandOptionChoice{
+			Name:  voice.Name,
 			Value: voice.Name,
 		}
+
+		voiceChoices[gender] = append(voiceChoices[gender], choice)
 	}
 
 	var (
@@ -64,19 +67,48 @@ func (bot *Bot) getApplicationCommands(ctx context.Context) ([]*discordgo.Applic
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
-					Name:        "voice",
-					Description: "読子さんの声を変更します。",
+					Name:        "male-voice",
+					Description: "読子さんの声を男性に変更します。",
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Options: []*discordgo.ApplicationCommandOption{
 						{
-							Name:        "voice",
+							Name:        "name",
 							Description: "読子さんの声。",
 							Type:        discordgo.ApplicationCommandOptionString,
-							Choices:     voiceChoices,
+							Choices:     voiceChoices["male"],
 							Required:    true,
 						},
 					},
 				},
+				{
+					Name:        "female-voice",
+					Description: "読子さんの声を女性に変更します。",
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Name:        "name",
+							Description: "読子さんの声。",
+							Type:        discordgo.ApplicationCommandOptionString,
+							Choices:     voiceChoices["female"],
+							Required:    true,
+						},
+					},
+				},
+				// 現在 neutral は ja-JP に存在しないみたいなので使用しない
+				//{
+				//	Name:        "neutral-voice",
+				//	Description: "読子さんの声を中性に変更します。",
+				//	Type:        discordgo.ApplicationCommandOptionSubCommand,
+				//	Options: []*discordgo.ApplicationCommandOption{
+				//		{
+				//			Name:        "name",
+				//			Description: "読子さんの声。",
+				//			Type:        discordgo.ApplicationCommandOptionString,
+				//			Choices:     voiceChoices["neutral"],
+				//			Required:    true,
+				//		},
+				//	},
+				//},
 				{
 					Name:        "speed",
 					Description: "読子さんの読み上げ速度を変更します。",
