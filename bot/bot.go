@@ -304,6 +304,7 @@ func messageAuthorName(msg *discordgo.Message) (name string) {
 	if name == "" {
 		name = msg.Author.Username
 	}
+	name += "の発言。"
 
 	return name
 }
