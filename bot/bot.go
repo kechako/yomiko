@@ -233,13 +233,17 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 
 	var opts []tts.SynthesizeSpeechOption
 	if vs != nil {
-		if vs.VoiceName != nil {
-			opts = append(opts, tts.WithVoiceName(*vs.VoiceName))
+		pitchSupported := true
+		if voiceName := vs.VoiceName; voiceName != nil {
+			opts = append(opts, tts.WithVoiceName(*voiceName))
+			if isChirp3(*voiceName) {
+				pitchSupported = false
+			}
 		}
 		if vs.SpeakingRate != nil {
 			opts = append(opts, tts.WithSpeakingRate(*vs.SpeakingRate))
 		}
-		if vs.Pitch != nil {
+		if pitchSupported && vs.Pitch != nil {
 			opts = append(opts, tts.WithPitch(*vs.Pitch))
 		}
 	}
@@ -251,6 +255,10 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 	if err != nil {
 		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
 	}
+}
+
+func isChirp3(name string) bool {
+	return strings.Contains(strings.ToLower(name), "chirp3")
 }
 
 var urlRegexp = regexp.MustCompile(`https?://[^\s]{2,}`)
