@@ -4,6 +4,8 @@ go 1.25
 
 toolchain go1.25.4
 
+replace github.com/bwmarrin/discordgo => github.com/Richy-Z/discordgo v0.29.1-0.20251123191524-2672c0ec4dca
+
 require (
 	cloud.google.com/go/texttospeech v1.16.0
 	entgo.io/ent v0.14.5
