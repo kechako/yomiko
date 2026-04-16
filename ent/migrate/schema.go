@@ -11,7 +11,7 @@ var (
 	// VoiceSettingsColumns holds the columns for the "voice_settings" table.
 	VoiceSettingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "user_id", Type: field.TypeString, Unique: true},
+		{Name: "user_id", Type: field.TypeUint64, Unique: true},
 		{Name: "voice_name", Type: field.TypeString, Nullable: true},
 		{Name: "speaking_rate", Type: field.TypeFloat64, Nullable: true},
 		{Name: "pitch", Type: field.TypeFloat64, Nullable: true},

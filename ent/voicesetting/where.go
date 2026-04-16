@@ -4,6 +4,7 @@ package voicesetting
 
 import (
 	"entgo.io/ent/dialect/sql"
+	snowflake "github.com/disgoorg/snowflake/v2"
 	"github.com/kechako/yomiko/ent/predicate"
 )
 
@@ -53,8 +54,9 @@ func IDLTE(id int) predicate.VoiceSetting {
 }
 
 // UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldEQ(FieldUserID, v))
+func UserID(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldEQ(FieldUserID, vc))
 }
 
 // VoiceName applies equality check predicate on the "voice_name" field. It's identical to VoiceNameEQ.
@@ -73,68 +75,57 @@ func Pitch(v float64) predicate.VoiceSetting {
 }
 
 // UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldEQ(FieldUserID, v))
+func UserIDEQ(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldEQ(FieldUserID, vc))
 }
 
 // UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldNEQ(FieldUserID, v))
+func UserIDNEQ(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldNEQ(FieldUserID, vc))
 }
 
 // UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldIn(FieldUserID, vs...))
+func UserIDIn(vs ...snowflake.ID) predicate.VoiceSetting {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = uint64(vs[i])
+	}
+	return predicate.VoiceSetting(sql.FieldIn(FieldUserID, v...))
 }
 
 // UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldNotIn(FieldUserID, vs...))
+func UserIDNotIn(vs ...snowflake.ID) predicate.VoiceSetting {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = uint64(vs[i])
+	}
+	return predicate.VoiceSetting(sql.FieldNotIn(FieldUserID, v...))
 }
 
 // UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldGT(FieldUserID, v))
+func UserIDGT(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldGT(FieldUserID, vc))
 }
 
 // UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldGTE(FieldUserID, v))
+func UserIDGTE(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldGTE(FieldUserID, vc))
 }
 
 // UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldLT(FieldUserID, v))
+func UserIDLT(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldLT(FieldUserID, vc))
 }
 
 // UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldLTE(FieldUserID, v))
-}
-
-// UserIDContains applies the Contains predicate on the "user_id" field.
-func UserIDContains(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldContains(FieldUserID, v))
-}
-
-// UserIDHasPrefix applies the HasPrefix predicate on the "user_id" field.
-func UserIDHasPrefix(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldHasPrefix(FieldUserID, v))
-}
-
-// UserIDHasSuffix applies the HasSuffix predicate on the "user_id" field.
-func UserIDHasSuffix(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldHasSuffix(FieldUserID, v))
-}
-
-// UserIDEqualFold applies the EqualFold predicate on the "user_id" field.
-func UserIDEqualFold(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldEqualFold(FieldUserID, v))
-}
-
-// UserIDContainsFold applies the ContainsFold predicate on the "user_id" field.
-func UserIDContainsFold(v string) predicate.VoiceSetting {
-	return predicate.VoiceSetting(sql.FieldContainsFold(FieldUserID, v))
+func UserIDLTE(v snowflake.ID) predicate.VoiceSetting {
+	vc := uint64(v)
+	return predicate.VoiceSetting(sql.FieldLTE(FieldUserID, vc))
 }
 
 // VoiceNameEQ applies the EQ predicate on the "voice_name" field.

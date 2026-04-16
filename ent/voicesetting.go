@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	snowflake "github.com/disgoorg/snowflake/v2"
 	"github.com/kechako/yomiko/ent/voicesetting"
 )
 
@@ -17,7 +18,7 @@ type VoiceSetting struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
+	UserID snowflake.ID `json:"user_id,omitempty"`
 	// VoiceName holds the value of the "voice_name" field.
 	VoiceName *string `json:"voice_name,omitempty"`
 	// SpeakingRate holds the value of the "speaking_rate" field.
@@ -34,9 +35,9 @@ func (*VoiceSetting) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case voicesetting.FieldSpeakingRate, voicesetting.FieldPitch:
 			values[i] = new(sql.NullFloat64)
-		case voicesetting.FieldID:
+		case voicesetting.FieldID, voicesetting.FieldUserID:
 			values[i] = new(sql.NullInt64)
-		case voicesetting.FieldUserID, voicesetting.FieldVoiceName:
+		case voicesetting.FieldVoiceName:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -60,10 +61,10 @@ func (_m *VoiceSetting) assignValues(columns []string, values []any) error {
 			}
 			_m.ID = int(value.Int64)
 		case voicesetting.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
+			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field user_id", values[i])
 			} else if value.Valid {
-				_m.UserID = value.String
+				_m.UserID = snowflake.ID(value.Int64)
 			}
 		case voicesetting.FieldVoiceName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -123,7 +124,7 @@ func (_m *VoiceSetting) String() string {
 	builder.WriteString("VoiceSetting(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("user_id=")
-	builder.WriteString(_m.UserID)
+	builder.WriteString(fmt.Sprintf("%v", _m.UserID))
 	builder.WriteString(", ")
 	if v := _m.VoiceName; v != nil {
 		builder.WriteString("voice_name=")

@@ -3,6 +3,7 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 // VoiceSetting holds the schema definition for the VoiceSetting entity.
@@ -13,9 +14,9 @@ type VoiceSetting struct {
 // Fields of the VoiceSetting.
 func (VoiceSetting) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("user_id").
+		field.Uint64("user_id").
+			GoType(snowflake.ID(0)).
 			Unique().
-			NotEmpty().
 			Immutable(),
 		field.String("voice_name").
 			Nillable().

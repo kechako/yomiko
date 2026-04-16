@@ -42,11 +42,6 @@ func ValidColumn(column string) bool {
 	return false
 }
 
-var (
-	// UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
-	UserIDValidator func(string) error
-)
-
 // OrderOption defines the ordering options for the VoiceSetting queries.
 type OrderOption func(*sql.Selector)
 

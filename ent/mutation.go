@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	snowflake "github.com/disgoorg/snowflake/v2"
 	"github.com/kechako/yomiko/ent/predicate"
 	"github.com/kechako/yomiko/ent/voicesetting"
 )
@@ -32,7 +33,8 @@ type VoiceSettingMutation struct {
 	op               Op
 	typ              string
 	id               *int
-	user_id          *string
+	user_id          *snowflake.ID
+	adduser_id       *snowflake.ID
 	voice_name       *string
 	speaking_rate    *float64
 	addspeaking_rate *float64
@@ -143,12 +145,13 @@ func (m *VoiceSettingMutation) IDs(ctx context.Context) ([]int, error) {
 }
 
 // SetUserID sets the "user_id" field.
-func (m *VoiceSettingMutation) SetUserID(s string) {
+func (m *VoiceSettingMutation) SetUserID(s snowflake.ID) {
 	m.user_id = &s
+	m.adduser_id = nil
 }
 
 // UserID returns the value of the "user_id" field in the mutation.
-func (m *VoiceSettingMutation) UserID() (r string, exists bool) {
+func (m *VoiceSettingMutation) UserID() (r snowflake.ID, exists bool) {
 	v := m.user_id
 	if v == nil {
 		return
@@ -159,7 +162,7 @@ func (m *VoiceSettingMutation) UserID() (r string, exists bool) {
 // OldUserID returns the old "user_id" field's value of the VoiceSetting entity.
 // If the VoiceSetting object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *VoiceSettingMutation) OldUserID(ctx context.Context) (v string, err error) {
+func (m *VoiceSettingMutation) OldUserID(ctx context.Context) (v snowflake.ID, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
 	}
@@ -173,9 +176,28 @@ func (m *VoiceSettingMutation) OldUserID(ctx context.Context) (v string, err err
 	return oldValue.UserID, nil
 }
 
+// AddUserID adds s to the "user_id" field.
+func (m *VoiceSettingMutation) AddUserID(s snowflake.ID) {
+	if m.adduser_id != nil {
+		*m.adduser_id += s
+	} else {
+		m.adduser_id = &s
+	}
+}
+
+// AddedUserID returns the value that was added to the "user_id" field in this mutation.
+func (m *VoiceSettingMutation) AddedUserID() (r snowflake.ID, exists bool) {
+	v := m.adduser_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
 // ResetUserID resets all changes to the "user_id" field.
 func (m *VoiceSettingMutation) ResetUserID() {
 	m.user_id = nil
+	m.adduser_id = nil
 }
 
 // SetVoiceName sets the "voice_name" field.
@@ -457,7 +479,7 @@ func (m *VoiceSettingMutation) OldField(ctx context.Context, name string) (ent.V
 func (m *VoiceSettingMutation) SetField(name string, value ent.Value) error {
 	switch name {
 	case voicesetting.FieldUserID:
-		v, ok := value.(string)
+		v, ok := value.(snowflake.ID)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -492,6 +514,9 @@ func (m *VoiceSettingMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *VoiceSettingMutation) AddedFields() []string {
 	var fields []string
+	if m.adduser_id != nil {
+		fields = append(fields, voicesetting.FieldUserID)
+	}
 	if m.addspeaking_rate != nil {
 		fields = append(fields, voicesetting.FieldSpeakingRate)
 	}
@@ -506,6 +531,8 @@ func (m *VoiceSettingMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *VoiceSettingMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case voicesetting.FieldUserID:
+		return m.AddedUserID()
 	case voicesetting.FieldSpeakingRate:
 		return m.AddedSpeakingRate()
 	case voicesetting.FieldPitch:
@@ -519,6 +546,13 @@ func (m *VoiceSettingMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *VoiceSettingMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case voicesetting.FieldUserID:
+		v, ok := value.(snowflake.ID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUserID(v)
+		return nil
 	case voicesetting.FieldSpeakingRate:
 		v, ok := value.(float64)
 		if !ok {

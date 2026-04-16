@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	snowflake "github.com/disgoorg/snowflake/v2"
 	"github.com/kechako/yomiko/ent/voicesetting"
 )
 
@@ -20,7 +21,7 @@ type VoiceSettingCreate struct {
 }
 
 // SetUserID sets the "user_id" field.
-func (_c *VoiceSettingCreate) SetUserID(v string) *VoiceSettingCreate {
+func (_c *VoiceSettingCreate) SetUserID(v snowflake.ID) *VoiceSettingCreate {
 	_c.mutation.SetUserID(v)
 	return _c
 }
@@ -104,11 +105,6 @@ func (_c *VoiceSettingCreate) check() error {
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "VoiceSetting.user_id"`)}
 	}
-	if v, ok := _c.mutation.UserID(); ok {
-		if err := voicesetting.UserIDValidator(v); err != nil {
-			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "VoiceSetting.user_id": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -136,7 +132,7 @@ func (_c *VoiceSettingCreate) createSpec() (*VoiceSetting, *sqlgraph.CreateSpec)
 		_spec = sqlgraph.NewCreateSpec(voicesetting.Table, sqlgraph.NewFieldSpec(voicesetting.FieldID, field.TypeInt))
 	)
 	if value, ok := _c.mutation.UserID(); ok {
-		_spec.SetField(voicesetting.FieldUserID, field.TypeString, value)
+		_spec.SetField(voicesetting.FieldUserID, field.TypeUint64, value)
 		_node.UserID = value
 	}
 	if value, ok := _c.mutation.VoiceName(); ok {

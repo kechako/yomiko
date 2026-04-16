@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 
-ARG GO_VERSION=1.25.4
+ARG GO_VERSION=1.26.3
 
 #========================================
 # Build
-FROM golang:${GO_VERSION}-bookworm AS builder
+FROM golang:${GO_VERSION}-trixie AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -36,7 +36,7 @@ RUN go install ./cmd/yomiko
 
 #========================================
 # Runtime
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 # install packages
 RUN apt-get update && apt-get install -y --no-install-recommends \

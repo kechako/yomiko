@@ -1,3 +1,4 @@
+// Package bot provides a Discord bot that reads messages aloud in voice channels using text-to-speech (TTS) technology.
 package bot
 
 import (
@@ -6,16 +7,22 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
+	"time"
 
-	"github.com/bwmarrin/discordgo"
+	"github.com/disgoorg/disgo"
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/snowflake/v2"
+	"github.com/kechako/yomiko/bot/internal/botutil"
+	"github.com/kechako/yomiko/bot/internal/reaction"
 	"github.com/kechako/yomiko/bot/internal/replacer"
-	"github.com/kechako/yomiko/ent"
-	"github.com/kechako/yomiko/ent/voicesetting"
+	"github.com/kechako/yomiko/bot/internal/repo"
+	"github.com/kechako/yomiko/bot/internal/yomiko"
 	"github.com/kechako/yomiko/ssml"
 	"github.com/kechako/yomiko/tts"
 	_ "github.com/mattn/go-sqlite3"
@@ -37,121 +44,170 @@ const (
 
 type Bot struct {
 	cfg      *Config
-	s        *discordgo.Session
+	c        *bot.Client
 	tts      *tts.Client
-	ent      *ent.Client
+	repo     repo.Repository
 	logger   *slog.Logger
-	commands []*discordgo.ApplicationCommand
+	commands []discord.ApplicationCommand
 
-	replacer *replacer.Replacer
+	replacer      *replacer.Replacer
+	reactions     map[snowflake.ID]*AutoReaction
+	reactionChain sync.Map
 
 	mu       sync.RWMutex
-	sessions map[string]*yomikoSession
+	sessions map[snowflake.ID]*yomiko.Session
 	targets  map[string]string
 
 	exit func()
 }
 
 func New(ctx context.Context, cfg *Config) (*Bot, error) {
-	s, err := discordgo.New("Bot " + cfg.Token)
-	if err != nil {
-		return nil, fmt.Errorf("bot.New: %w", err)
-	}
-
-	ttsOpts := []tts.ClientOption{
-		tts.WithSampleRate(SampleRate),
-	}
-	if credJSON, err := cfg.getCredentialsJSON(); err != nil {
-		return nil, fmt.Errorf("bot.New: %w", err)
-	} else if len(credJSON) > 0 {
-		ttsOpts = append(ttsOpts, tts.WithCredentialsJSON(credJSON))
-	}
-
-	c, err := tts.New(ctx, ttsOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("bot.New: %w", err)
-	}
-
-	e, err := ent.Open("sqlite3", makeDataSourceName(cfg))
-	if err != nil {
-		return nil, fmt.Errorf("bot.New: %w", err)
-	}
-
-	if err := e.Schema.Create(ctx); err != nil {
-		return nil, fmt.Errorf("bot.New: %w", err)
-	}
-
 	bot := &Bot{
-		cfg:      cfg,
-		s:        s,
-		tts:      c,
-		ent:      e,
-		logger:   slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{})),
-		replacer: makeReplacer(cfg),
-		sessions: make(map[string]*yomikoSession),
-		targets:  make(map[string]string),
+		cfg:       cfg,
+		logger:    initLogger(&cfg.Logging),
+		replacer:  makeReplacer(cfg),
+		reactions: initAutoReactions(cfg),
+		sessions:  make(map[snowflake.ID]*yomiko.Session),
+		targets:   make(map[string]string),
 	}
 
-	if err := bot.init(); err != nil {
+	if err := bot.initTTS(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := bot.initRepo(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := bot.initDiscord(); err != nil {
 		return nil, err
 	}
 
 	return bot, nil
 }
 
-func (bot *Bot) init() error {
-	s := bot.s
+func initLogger(cfg *LoggingConfig) *slog.Logger {
+	var h slog.Handler
+	if cfg.JSON {
+		h = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: cfg.Level,
+		})
+	} else {
+		h = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: cfg.Level,
+		})
+	}
 
-	// Register ready as a callback for the ready events.
-	s.AddHandler(bot.handleReady)
+	return slog.New(h)
+}
 
-	// Register messageCreate as a callback for the messageCreate events.
-	s.AddHandler(bot.handleMessageCreate)
+func (b *Bot) initDiscord() error {
+	cfg := b.cfg
 
-	// Register guildCreate as a callback for the guildCreate events.
-	s.AddHandler(bot.handleGuildCreate)
+	c, err := disgo.New(
+		cfg.Token,
+		bot.WithLogger(b.logger),
+		bot.WithGatewayConfigOpts(
+			gateway.WithIntents(
+				gateway.IntentGuilds,
+				gateway.IntentGuildMessages,
+				gateway.IntentMessageContent,
+				gateway.IntentGuildVoiceStates,
+				gateway.IntentGuildMessageReactions,
+			),
+		),
+		bot.WithEventListeners(
+			// Register ready as a listener for the ready events.
+			bot.NewListenerFunc(b.handleReady),
+			// Register messageCreate as a listener for the messageCreate events.
+			bot.NewListenerFunc(b.handleMessageCreate),
+			// Register messageReactionAdd as a listener for the messageReactionAdd events.
+			bot.NewListenerFunc(b.handleGuildMessageReactionAdd),
+			// Register guildCreate as a listener for the guildCreate events.
+			bot.NewListenerFunc(b.handleGuildCreate),
+			// Register interactionCreate as a listener for the guildCreate events.
+			bot.NewListenerFunc(b.handleInteractionCreate),
+		),
+		//bot.WithVoiceManagerConfigOpts(
+		//	voice.WithDaveSessionCreateFunc(golibdave.NewSession),
+		//),
+	)
+	if err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	}
+	b.c = c
 
-	s.AddHandler(bot.handleInteractionCreate)
+	commands, err := b.getApplicationCommands(context.Background())
+	if err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	}
 
-	// We need information about guilds (which includes their channels),
-	// messages and voice states.
-	s.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent | discordgo.IntentsGuildVoiceStates
+	cmds, err := b.c.Rest.SetGlobalCommands(b.c.ApplicationID, commands)
+	if err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	}
+	b.commands = cmds
 
 	return nil
 }
 
-func makeDataSourceName(cfg *Config) string {
-	opts := url.Values{}
-	opts.Set("mode", "rwc")
-	opts.Set("_fk", "1")
+func (b *Bot) initTTS(ctx context.Context) error {
+	cfg := b.cfg
 
-	n := &url.URL{
-		Scheme:   "file",
-		Path:     cfg.DatabasePath,
-		RawQuery: opts.Encode(),
+	ttsOpts := []tts.ClientOption{
+		tts.WithSampleRate(SampleRate),
+	}
+	if credJSON, err := cfg.getCredentialsJSON(); err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	} else if len(credJSON) > 0 {
+		ttsOpts = append(ttsOpts, tts.WithCredentialsJSON(credJSON))
 	}
 
-	return n.String()
+	c, err := tts.New(ctx, ttsOpts...)
+	if err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	}
+	b.tts = c
+
+	return nil
 }
 
-func (bot *Bot) Close() error {
+func (b *Bot) initRepo(ctx context.Context) error {
+	r, err := repo.New(ctx, b.cfg.DatabasePath)
+	if err != nil {
+		return fmt.Errorf("bot.New: %w", err)
+	}
+
+	b.repo = r
+
+	return nil
+}
+
+func (b *Bot) Close() error {
 	var errs []error
 
-	if bot.exit != nil {
-		bot.exit()
+	if b.exit != nil {
+		b.exit()
 	}
 
-	if err := bot.closeAllSessions(); err != nil {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := b.closeAllSessions(ctx); err != nil {
 		errs = append(errs, err)
 	}
-	if err := bot.s.Close(); err != nil {
-		errs = append(errs, err)
+	if b.tts != nil {
+		if err := b.tts.Close(); err != nil {
+			errs = append(errs, err)
+		}
+		b.tts = nil
 	}
-	if err := bot.tts.Close(); err != nil {
-		errs = append(errs, err)
-	}
-	if err := bot.ent.Close(); err != nil {
-		errs = append(errs, err)
+	if b.repo != nil {
+		if err := b.repo.Close(); err != nil {
+			errs = append(errs, err)
+		}
+		b.repo = nil
 	}
 
 	if len(errs) > 0 {
@@ -161,11 +217,11 @@ func (bot *Bot) Close() error {
 	return nil
 }
 
-func (bot *Bot) Start(ctx context.Context) error {
+func (b *Bot) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
-	bot.exit = cancel
+	b.exit = cancel
 
-	err := bot.s.Open()
+	err := b.c.OpenGateway(ctx)
 	if err != nil {
 		return fmt.Errorf("bot.Bot.Start: %w", err)
 	}
@@ -175,46 +231,41 @@ func (bot *Bot) Start(ctx context.Context) error {
 	return nil
 }
 
-func (bot *Bot) handleReady(s *discordgo.Session, event *discordgo.Ready) {
-	bot.logger.Info("ready")
-	bot.updateGameStatus()
-
-	commands, err := bot.getApplicationCommands(context.Background())
+func (b *Bot) handleReady(event *events.Ready) {
+	b.logger.Info("ready")
+	err := b.updateGameStatus(context.TODO())
 	if err != nil {
-		bot.logger.Error("failed to get application commands", slog.Any("error", err))
-		return
-	}
-
-	for _, cmd := range commands {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, "", cmd)
-		if err != nil {
-			bot.logger.Error("failed to create application command", slog.Any("error", err))
-			continue
-		}
-		bot.commands = append(bot.commands, cmd)
+		b.logger.Error("failed to update game status", slog.Any("error", err))
 	}
 }
 
-func (bot *Bot) updateGameStatus() {
-	bot.mu.RLock()
-	defer bot.mu.RUnlock()
+func (b *Bot) updateGameStatus(ctx context.Context) error {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
-	name := fmt.Sprintf("%d 個のサーバーで読み上げ", len(bot.sessions))
+	name := fmt.Sprintf("%d 個のサーバーで読み上げ", len(b.sessions))
 
-	bot.s.UpdateGameStatus(0, name)
+	err := b.c.SetPresence(ctx, gateway.WithOnlineStatus(discord.OnlineStatus(name)))
+	if err != nil {
+		return fmt.Errorf("bot.Bot.updateGameStatus: %w", err)
+	}
+	return nil
 }
 
-func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.MessageCreate) {
-	if event.Author.ID == s.State.User.ID {
+func (b *Bot) handleMessageCreate(event *events.MessageCreate) {
+	msg := &event.Message
+	if msg.Author.ID == b.c.ID() {
 		return
 	}
 
-	guildID := event.GuildID
+	go b.autoReaction(msg.ChannelID, msg.Author.ID, msg.ID)
 
-	bot.mu.RLock()
-	defer bot.mu.RUnlock()
+	guildID := *event.GuildID
 
-	ys, ok := bot.sessions[guildID]
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	ys, ok := b.sessions[guildID]
 	if !ok {
 		return
 	}
@@ -225,9 +276,9 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 
 	ctx := context.Background()
 
-	vs, err := bot.getUserVoiceSetting(ctx, event.Author.ID)
+	vs, err := b.repo.GetUserVoiceSetting(ctx, msg.Author.ID)
 	if err != nil {
-		bot.logger.Error("failed to get user voice setting", slog.Any("error", err))
+		b.logger.Error("failed to get user voice setting", slog.Any("error", err))
 		return
 	}
 
@@ -248,12 +299,28 @@ func (bot *Bot) handleMessageCreate(s *discordgo.Session, event *discordgo.Messa
 		}
 	}
 
-	err = ys.Read(
+	err = ys.Speak(
 		context.Background(),
-		bot.makeSSML(event.Message),
+		b.makeSSML(msg),
 		opts...)
 	if err != nil {
-		bot.logger.Error("yomiko failed to read text", slog.Any("error", err))
+		b.logger.Error("yomiko failed to read text", slog.Any("error", err))
+	}
+}
+
+func (b *Bot) handleGuildMessageReactionAdd(event *events.GuildMessageReactionAdd) {
+	if event.UserID == b.c.ID() {
+		return
+	}
+
+	if name := event.Emoji.Name; name != nil {
+		key := reaction.NewChainKey(event.ChannelID, event.MessageID)
+		if v, ok := b.reactionChain.Load(key); ok {
+			chain, ok := v.(*reaction.Chain)
+			if ok {
+				chain.TriggerRemove(context.Background(), *name)
+			}
+		}
 	}
 }
 
@@ -261,15 +328,13 @@ func isChirp3(name string) bool {
 	return strings.Contains(strings.ToLower(name), "chirp3")
 }
 
-var urlRegexp = regexp.MustCompile(`https?://[^\s]{2,}`)
-
-func (bot *Bot) makeSSML(msg *discordgo.Message) string {
+func (b *Bot) makeSSML(msg *discord.Message) string {
 	root := ssml.New()
 	author := messageAuthorName(msg)
 
 	// add author
 	authorSentence := &ssml.Sentence{}
-	bot.replacer.Replace(authorSentence, author)
+	b.replacer.Replace(authorSentence, author)
 	root.AddNode(&ssml.Paragraph{
 		Nodes: []ssml.Node{
 			authorSentence,
@@ -288,18 +353,18 @@ func (bot *Bot) makeSSML(msg *discordgo.Message) string {
 		p.AddNode(sentence)
 
 		text := mr.Replace(strings.TrimSpace(s.Text()))
-		bot.replacer.Replace(sentence, text)
+		b.replacer.Replace(sentence, text)
 	}
 
 	return root.ToSSML()
 }
 
-func messageAuthorName(msg *discordgo.Message) (name string) {
+func messageAuthorName(msg *discord.Message) (name string) {
 	if msg.Member != nil {
-		name = msg.Member.Nick
+		name = botutil.PtrToValue(msg.Member.Nick)
 	}
 	if name == "" {
-		name = msg.Author.GlobalName
+		name = botutil.PtrToValue(msg.Author.GlobalName)
 	}
 	if name == "" {
 		name = msg.Author.Username
@@ -309,374 +374,306 @@ func messageAuthorName(msg *discordgo.Message) (name string) {
 	return name
 }
 
-func newMentionReplacer(m *discordgo.Message) *strings.Replacer {
+func newMentionReplacer(m *discord.Message) *strings.Replacer {
 	var oldnew []string
 
 	for _, user := range m.Mentions {
-		username := user.GlobalName
+		username := botutil.PtrToValue(user.GlobalName)
 		if username == "" {
 			username = user.Username
 		}
-		oldnew = append(oldnew, "<@"+user.ID+">", username)
-		oldnew = append(oldnew, "<@!"+user.ID+">", username)
+		userID := user.ID.String()
+		oldnew = append(oldnew, "<@"+userID+">", username)
+		oldnew = append(oldnew, "<@!"+userID+">", username)
 	}
 
 	return strings.NewReplacer(oldnew...)
 }
 
-func (bot *Bot) handleGuildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	bot.logger.Info("guild created", slog.String("guild_id", event.ID), slog.String("guild_name", event.Name))
+func (b *Bot) handleGuildCreate(event *events.GuildReady) {
+	guild := &event.Guild
+	b.logger.Info("guild created", slog.Uint64("guild_id", uint64(guild.ID)), slog.String("guild_name", guild.Name))
 }
 
-func (bot *Bot) handleInteractionCreate(s *discordgo.Session, event *discordgo.InteractionCreate) {
+func (b *Bot) handleInteractionCreate(event *events.ApplicationCommandInteractionCreate) {
 	ctx := context.Background()
 
-	guildID := event.GuildID
-	channelID := event.ChannelID
+	guildID := botutil.PtrToValue(event.GuildID())
+	if guildID == 0 {
+		err := event.CreateMessage(*createErrorMessage("エラー", "ギルドIDを取得できませんでした。"))
+		if err != nil {
+			b.logger.Error("failed to create message", slog.Any("error", err))
+		}
+		return
+	}
+	channelID := event.Channel().ID()
+	userID := event.Member().User.ID
 
-	var res *discordgo.InteractionResponse
+	var res *discord.MessageCreate
 
-	data := event.ApplicationCommandData()
-	switch data.Name {
+	data := event.SlashCommandInteractionData()
+	switch data.CommandName() {
 	case "yomiko":
-		subCmd := data.Options[0]
-		switch subCmd.Name {
+		subCmdName := botutil.PtrToValue(data.SubCommandName)
+		switch subCmdName {
 		case "join":
-			voiceChannelID := subCmd.Options[0].Value.(string)
-
-			ys, err := bot.yomikoJoin(guildID, channelID, voiceChannelID)
-			if err != nil {
-				if errors.Is(err, errYomikoAlreadyJoined) {
-					res = createWarnResponse("入室済です", fmt.Sprintf("読子さんは既に <#%s> に入室しています。\n<#%s> への投稿を読み上げます。", ys.VoiceChannelID(), ys.TextChannelID()))
-				} else {
-					res = createErrorResponse("エラーが発生しました！", "")
-				}
-				break
-			}
-
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "ごきげんよう、読子です",
-							Description: fmt.Sprintf("読子さんは <#%s> に入室しました。", ys.VoiceChannelID()),
-							Color:       colorSuccess,
-						},
-					},
-				},
-			}
+			_ = channelID
+			res = b.yomikoMaintenanceMode()
+			//res = b.yomikoJoinCommand(ctx, guildID, channelID, &data)
 		case "leave":
-			voiceChannelID, err := bot.yomikoLeave(guildID)
-			if err != nil {
-				if errors.Is(err, errYomikoHasNotJoined) {
-					res = createWarnResponse("読子さんは入室していません", "")
-				} else {
-					res = createErrorResponse("エラーが発生しました！", "")
-				}
-				break
-			}
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "みなさま、ごきげんよう",
-							Description: fmt.Sprintf("読子さんは <#%s> から退室しました。", voiceChannelID),
-							Color:       colorInfo,
-						},
-					},
-				},
-			}
+			res = b.yomikoMaintenanceMode()
+			//res = b.yomikoLeaveCommand(ctx, guildID)
 		case "male-voice", "female-voice", "neutral-voice":
-			voiceName := subCmd.Options[0].Value.(string)
-
-			userID := event.Member.User.ID
-			vs, err := bot.updateUserVoiceName(ctx, userID, voiceName)
-			if err != nil {
-				res = createErrorResponse("エラーが発生しました！", "")
-				break
-			}
-
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの声を「%s」に設定しました。", *vs.VoiceName),
-							Color:       colorSuccess,
-						},
-					},
-				},
-			}
+			res = b.yomikoVoiceNameCommand(ctx, userID, &data)
 		case "speed":
-			speakingRate := subCmd.Options[0].Value.(float64)
-
-			userID := event.Member.User.ID
-			vs, err := bot.updateUserSpeakingRate(ctx, userID, speakingRate)
-			if err != nil {
-				res = createErrorResponse("エラーが発生しました！", "")
-				break
-			}
-
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの読み上げ速度を「%.01f」に設定しました。", *vs.SpeakingRate),
-							Color:       colorSuccess,
-						},
-					},
-				},
-			}
+			res = b.yomikoVoiceSpeedCommand(ctx, userID, &data)
 		case "pitch":
-			pitch := subCmd.Options[0].Value.(float64)
-
-			userID := event.Member.User.ID
-			vs, err := bot.updateUserVoicePitch(ctx, userID, pitch)
-			if err != nil {
-				res = createErrorResponse("エラーが発生しました！", "")
-				break
-			}
-
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "ボイス設定",
-							Description: fmt.Sprintf("読子さんの声の音程を「%.01f」に設定しました。", *vs.Pitch),
-							Color:       colorSuccess,
-						},
-					},
-				},
-			}
+			res = b.yomikoVoicePitchCommand(ctx, userID, &data)
 		case "reset":
-			userID := event.Member.User.ID
-			_, err := bot.resetUserVoiceSetting(ctx, userID)
-			if err != nil {
-				res = createErrorResponse("エラーが発生しました！", "")
-				break
-			}
-
-			res = &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Title:       "ボイス設定",
-							Description: "読子さんの声の設定を初期値に設定しました。",
-							Color:       colorSuccess,
-						},
-					},
-				},
-			}
+			res = b.yomikoVoiceResetCommand(ctx, userID)
 		}
 	}
 
 	if res == nil {
-		res = &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Embeds: []*discordgo.MessageEmbed{
-					{
-						Title: "コマンドを処理できませんでした",
-					},
-				},
-			},
+		res = new(discord.NewMessageCreate().
+			WithEmbeds(discord.Embed{
+				Title: "コマンドを処理できませんでした",
+			}))
+	}
+	event.CreateMessage(*res)
+}
+
+func (b *Bot) yomikoMaintenanceMode() *discord.MessageCreate {
+	return createWarnMessage("ごめんなさい", "読子は現在メンテナンス中です。読み上げができません。")
+}
+
+func (b *Bot) yomikoJoinCommand(ctx context.Context, guildID, channelID snowflake.ID, data *discord.SlashCommandInteractionData) *discord.MessageCreate {
+	voiceChannel, ok := data.OptChannel("voice-channel")
+	if !ok {
+		return createWarnMessage("エラー", "チャンネルが指定されていません。")
+	}
+	b.logger.Debug("yomiko join", slog.Uint64("voice-channel", uint64(voiceChannel.ID)))
+
+	ys, err := b.yomikoJoin(ctx, guildID, channelID, voiceChannel.ID)
+	if err != nil {
+		if errors.Is(err, errYomikoAlreadyJoined) {
+			return createWarnMessage("入室済です", fmt.Sprintf("読子さんは既に <#%s> に入室しています。\n<#%s> への投稿を読み上げます。", ys.VoiceChannelID(), ys.TextChannelID()))
+		} else {
+			return createErrorMessage("エラーが発生しました！", "")
 		}
 	}
-	s.InteractionRespond(event.Interaction, res)
+
+	return createMessage(
+		"ごきげんよう、読子です",
+		fmt.Sprintf("読子さんは <#%s> に入室しました。", ys.VoiceChannelID()),
+		colorSuccess,
+	)
 }
 
-func createWarnResponse(title, description string) *discordgo.InteractionResponse {
-	return &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       title,
-					Description: description,
-					Color:       colorWarn,
-				},
-			},
-		},
-	}
-}
+func (b *Bot) yomikoLeaveCommand(ctx context.Context, guildID snowflake.ID) *discord.MessageCreate {
+	b.logger.Debug("yomiko leave", slog.Uint64("guild-id", uint64(guildID)))
 
-func createErrorResponse(title, description string) *discordgo.InteractionResponse {
-	return &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{
-				{
-					Title:       title,
-					Description: description,
-					Color:       colorError,
-				},
-			},
-		},
-	}
-}
-
-func (bot *Bot) cleanupApplicationCommands() {
-	for _, cmd := range bot.commands {
-		err := bot.s.ApplicationCommandDelete(bot.s.State.User.ID, "", cmd.ID)
-		if err != nil {
-			bot.logger.Error("failed to delete application command", slog.Any("error", err))
+	voiceChannelID, err := b.yomikoLeave(ctx, guildID)
+	if err != nil {
+		if errors.Is(err, errYomikoHasNotJoined) {
+			return createWarnMessage("読子さんは入室していません", "")
+		} else {
+			return createErrorMessage("エラーが発生しました！", "")
 		}
 	}
+
+	return createMessage(
+		"みなさま、ごきげんよう",
+		fmt.Sprintf("読子さんは <#%s> から退室しました。", voiceChannelID),
+		colorInfo,
+	)
 }
 
-func (bot *Bot) yomikoJoin(guildID, textChannelID, voiceChannelID string) (*yomikoSession, error) {
-	defer bot.updateGameStatus()
+func (b *Bot) yomikoVoiceNameCommand(ctx context.Context, userID snowflake.ID, data *discord.SlashCommandInteractionData) *discord.MessageCreate {
+	voiceName, ok := data.OptString("name")
+	if !ok {
+		return createWarnMessage("エラー", "音声名が指定されていません。")
+	}
 
-	bot.mu.Lock()
-	defer bot.mu.Unlock()
+	vs, err := b.repo.UpdateUserVoiceName(ctx, userID, voiceName)
+	if err != nil {
+		return createErrorMessage("エラーが発生しました！", "")
+	}
 
-	ys, ok := bot.sessions[guildID]
+	return createMessage(
+		"ボイス設定",
+		fmt.Sprintf("読子さんの声を「%s」に設定しました。", *vs.VoiceName),
+		colorSuccess,
+	)
+}
+
+func (b *Bot) yomikoVoiceSpeedCommand(ctx context.Context, userID snowflake.ID, data *discord.SlashCommandInteractionData) *discord.MessageCreate {
+	speakingRate, ok := data.OptFloat("speed")
+	if !ok {
+		return createWarnMessage("エラー", "スピードが指定されていません。")
+	}
+
+	vs, err := b.repo.UpdateUserSpeakingRate(ctx, userID, speakingRate)
+	if err != nil {
+		return createErrorMessage("エラーが発生しました！", "")
+	}
+
+	return createMessage(
+		"ボイス設定",
+		fmt.Sprintf("読子さんの読み上げ速度を「%.01f」に設定しました。", *vs.SpeakingRate),
+		colorSuccess,
+	)
+}
+
+func (b *Bot) yomikoVoicePitchCommand(ctx context.Context, userID snowflake.ID, data *discord.SlashCommandInteractionData) *discord.MessageCreate {
+	pitch, ok := data.OptFloat("pitch")
+	if !ok {
+		return createWarnMessage("エラー", "ピッチが指定されていません。")
+	}
+
+	vs, err := b.repo.UpdateUserVoicePitch(ctx, userID, pitch)
+	if err != nil {
+		return createErrorMessage("エラーが発生しました！", "")
+	}
+
+	return createMessage(
+		"ボイス設定",
+		fmt.Sprintf("読子さんの声の音程を「%.01f」に設定しました。", *vs.Pitch),
+		colorSuccess,
+	)
+}
+
+func (b *Bot) yomikoVoiceResetCommand(ctx context.Context, userID snowflake.ID) *discord.MessageCreate {
+	_, err := b.repo.ResetUserVoiceSetting(ctx, userID)
+	if err != nil {
+		return createErrorMessage("エラーが発生しました！", "")
+	}
+
+	return createMessage(
+		"ボイス設定",
+		"読子さんの声の設定を初期値に設定しました。",
+		colorSuccess,
+	)
+}
+
+func createMessage(title, description string, color int) *discord.MessageCreate {
+	return new(discord.NewMessageCreate().
+		WithEmbeds(discord.Embed{
+			Title:       title,
+			Description: description,
+			Color:       color,
+		}))
+}
+
+func createWarnMessage(title, description string) *discord.MessageCreate {
+	return createMessage(title, description, colorWarn)
+}
+
+func createErrorMessage(title, description string) *discord.MessageCreate {
+	return createMessage(title, description, colorError)
+}
+
+func (b *Bot) yomikoJoin(ctx context.Context, guildID, textChannelID, voiceChannelID snowflake.ID) (*yomiko.Session, error) {
+	defer b.updateGameStatus(ctx)
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	ys, ok := b.sessions[guildID]
 	if ok {
 		return ys, errYomikoAlreadyJoined
 	}
 
-	ys, err := newYomikoSession(bot.s, bot.tts, guildID, textChannelID, voiceChannelID)
+	ys, err := yomiko.New(ctx, &yomiko.Config{
+		Bot:            b.c,
+		TTS:            b.tts,
+		Logger:         b.logger,
+		GuildID:        guildID,
+		TextChannelID:  textChannelID,
+		VoiceChannelID: voiceChannelID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("bot.Bot.yomikoJoin: %w", err)
 	}
-	bot.sessions[guildID] = ys
+	err = ys.Open(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("bot.Bot.yomikoJoin: %w", err)
+	}
+
+	b.sessions[guildID] = ys
 
 	return ys, nil
 }
 
-func (bot *Bot) yomikoLeave(guildID string) (string, error) {
-	defer bot.updateGameStatus()
+func (b *Bot) yomikoLeave(ctx context.Context, guildID snowflake.ID) (snowflake.ID, error) {
+	defer b.updateGameStatus(ctx)
 
-	bot.mu.Lock()
-	defer bot.mu.Unlock()
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
-	ys, ok := bot.sessions[guildID]
+	ys, ok := b.sessions[guildID]
 	if !ok {
-		return "", errYomikoHasNotJoined
+		return 0, errYomikoHasNotJoined
 	}
 
-	err := ys.Close()
+	err := ys.Close(ctx)
 	if err != nil {
-		return "", fmt.Errorf("bot.Bot.yomikoLeave: %w", err)
+		return 0, fmt.Errorf("bot.Bot.yomikoLeave: %w", err)
 	}
 
-	delete(bot.sessions, guildID)
+	delete(b.sessions, guildID)
 
 	return ys.VoiceChannelID(), nil
 }
 
-func (bot *Bot) closeAllSessions() error {
-	bot.mu.Lock()
-	defer bot.mu.Unlock()
+func (b *Bot) autoReaction(channelID, userID, messageID snowflake.ID) {
+	ar, ok := b.reactions[userID]
+	if !ok {
+		return
+	}
+
+	key := reaction.NewChainKey(channelID, messageID)
+
+	chain, err := reaction.StartChain(context.Background(), &reaction.ChainConfig{
+		Rest:      b.c.Rest,
+		Logger:    b.logger,
+		Reaction:  ar.Reaction,
+		ChannelID: channelID,
+		MessageID: messageID,
+		Delay:     ar.MaxReactionDelay,
+		Timeout:   ar.AutoRemovalTimeout,
+		Completed: func() {
+			b.logger.Debug("reaction chain completed",
+				slog.Uint64("channel_id", uint64(channelID)),
+				slog.Uint64("message_id", uint64(messageID)),
+			)
+			b.reactionChain.Delete(key)
+		},
+	})
+	if err != nil {
+		b.logger.Error("failed to start reaction chain", slog.Any("error", err))
+	}
+
+	b.reactionChain.Store(key, chain)
+}
+
+func (b *Bot) closeAllSessions(ctx context.Context) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
 
 	var errs []error
 
-	for guildID, ys := range bot.sessions {
-		err := ys.Close()
+	for guildID, ys := range b.sessions {
+		err := ys.Close(ctx)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("bot.Bot.closeAllSessions: %w", err))
 			continue
 		}
 
-		delete(bot.sessions, guildID)
+		delete(b.sessions, guildID)
 	}
 
 	return errors.Join(errs...)
-}
-
-func (bot *Bot) updateUserVoiceName(ctx context.Context, userID, voiceName string) (*ent.VoiceSetting, error) {
-	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
-		m.SetVoiceName(voiceName)
-	})
-}
-
-func (bot *Bot) updateUserSpeakingRate(ctx context.Context, userID string, speakingRate float64) (*ent.VoiceSetting, error) {
-	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
-		m.SetSpeakingRate(speakingRate)
-	})
-}
-
-func (bot *Bot) updateUserVoicePitch(ctx context.Context, userID string, pitch float64) (*ent.VoiceSetting, error) {
-	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
-		m.SetPitch(pitch)
-	})
-}
-
-func (bot *Bot) resetUserVoiceSetting(ctx context.Context, userID string) (*ent.VoiceSetting, error) {
-	return bot.updateUserVoiceSetting(ctx, userID, func(m *ent.VoiceSettingMutation) {
-		m.ClearVoiceName()
-		m.ClearSpeakingRate()
-		m.ClearPitch()
-	})
-}
-
-func (bot *Bot) updateUserVoiceSetting(ctx context.Context, userID string, f func(m *ent.VoiceSettingMutation)) (*ent.VoiceSetting, error) {
-	tx, err := bot.ent.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err)
-	}
-	vs, err := tx.VoiceSetting.Query().
-		Where(voicesetting.UserID(userID)).
-		Only(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
-	}
-
-	if vs == nil {
-		// create
-		create := tx.VoiceSetting.Create().
-			SetUserID(userID)
-
-		f(create.Mutation())
-
-		vs, err = create.Save(ctx)
-		if err != nil {
-			return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
-		}
-	} else {
-		// update
-		update := tx.VoiceSetting.UpdateOne(vs)
-		f(update.Mutation())
-
-		vs, err = update.Save(ctx)
-		if err != nil {
-			return nil, rollback(tx, fmt.Errorf("bot.Bot.getVoiceSetting: %w", err))
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return vs, nil
-}
-
-func (bot *Bot) getUserVoiceSetting(ctx context.Context, userID string) (*ent.VoiceSetting, error) {
-	vs, err := bot.ent.VoiceSetting.Query().
-		Where(voicesetting.UserID(userID)).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("bot.Bot.getUserVoiceSetting: %w", err)
-	}
-
-	return vs, nil
-}
-
-func rollback(tx *ent.Tx, err error) error {
-	if rerr := tx.Rollback(); rerr != nil {
-		err = errors.Join(err, rerr)
-	}
-	return err
 }
 
 func makeReplacer(cfg *Config) *replacer.Replacer {
@@ -687,4 +684,12 @@ func makeReplacer(cfg *Config) *replacer.Replacer {
 	}
 
 	return replacer.New(oldnew...)
+}
+
+func initAutoReactions(cfg *Config) map[snowflake.ID]*AutoReaction {
+	reactions := make(map[snowflake.ID]*AutoReaction)
+	for _, ar := range cfg.AutoReactions {
+		reactions[ar.UserID] = ar
+	}
+	return reactions
 }

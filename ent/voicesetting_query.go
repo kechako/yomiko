@@ -262,7 +262,7 @@ func (_q *VoiceSettingQuery) Clone() *VoiceSettingQuery {
 // Example:
 //
 //	var v []struct {
-//		UserID string `json:"user_id,omitempty"`
+//		UserID snowflake.ID `json:"user_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
@@ -285,7 +285,7 @@ func (_q *VoiceSettingQuery) GroupBy(field string, fields ...string) *VoiceSetti
 // Example:
 //
 //	var v []struct {
-//		UserID string `json:"user_id,omitempty"`
+//		UserID snowflake.ID `json:"user_id,omitempty"`
 //	}
 //
 //	client.VoiceSetting.Query().
